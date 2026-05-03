@@ -35,7 +35,7 @@ class Step(BaseModel):
 class Artifact(BaseModel):
     """Resultado de un paso de ejecución."""
     id: str = Field(default_factory=lambda: str(uuid4()))
-    type: Literal["file_diff", "analysis", "plan", "log", "code", "error", "review", "code_generation"] = Field(
+    type: Literal["file_diff", "analysis", "plan", "log", "code", "error", "review", "code_generation", "tool_call"] = Field(
         ...,
         description="Tipo de artefacto"
     )

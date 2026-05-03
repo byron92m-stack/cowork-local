@@ -41,7 +41,7 @@ providers:
   
   executor:
     provider: "ollama"
-    model: "qwen2.5:14b"
+    model: "qwen3:14b"
     base_url: "${OLLAMA_BASE_URL:-http://127.0.0.1:11434}"
     max_tokens: 2048
     temperature: 0.2              # Bajo para generación de código más precisa

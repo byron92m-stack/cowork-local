@@ -35,7 +35,7 @@ deepseek:
 qwen:
   provider: "ollama"
   base_url: "http://127.0.0.1:11434"
-  model: "qwen2.5:14b"
+  model: "qwen3:14b"
   default_system_prompt: |
     Eres un ingeniero de software experto.
     Tu rol es ejecutar tareas técnicas concretas:

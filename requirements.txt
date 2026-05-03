@@ -68,3 +68,11 @@ uvicorn==0.46.0
 wheel==0.47.0
 xxhash==3.7.0
 zstandard==0.25.0
+playwright
+APScheduler
+redis
+yagmail
+notion-client
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

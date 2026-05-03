@@ -7,7 +7,7 @@ class MCPClient:
         self._cache = {}
     
     async def call(self, server: str, tool: str, arguments: Dict[str, Any]) -> str:
-        # Mapeo de servidores a módulos
+        # Mapeo completo de servidores
         if server == "filesystem":
             from tools.mcp.filesystem.server import call_tool
         elif server == "shell":
@@ -16,10 +16,22 @@ class MCPClient:
             from tools.mcp.git.server import call_tool
         elif server == "docker":
             from tools.mcp.docker.server import call_tool
+        elif server == "browser":
+            from tools.mcp.browser.server import call_tool
+        elif server == "websearch":
+            from tools.mcp.websearch.server import call_tool
+        elif server == "code_sandbox":
+            from tools.mcp.code_sandbox.server import call_tool
+        elif server == "gmail":
+            from tools.mcp.gmail.server import call_tool
+        elif server == "googledrive":
+            from tools.mcp.googledrive.server import call_tool
+        elif server == "notion":
+            from tools.mcp.notion.server import call_tool
         elif server == "skills":
             from tools.mcp.skills.server import call_tool
         else:
-            return f"Error: Servidor no encontrado: {server}. Disponibles: filesystem, shell, git, docker, skills"
+            return f"Error: Servidor no encontrado: {server}. Disponibles: filesystem, shell, git, docker, browser, websearch, code_sandbox, gmail, googledrive, notion, skills"
         
         try:
             result = await call_tool(tool, arguments)

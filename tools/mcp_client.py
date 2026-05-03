@@ -22,6 +22,8 @@ class MCPClient:
             from tools.mcp.websearch.server import call_tool
         elif server == "code_sandbox":
             from tools.mcp.code_sandbox.server import call_tool
+        elif server == "filewatcher":
+            from tools.mcp.filewatcher.server import call_tool
         elif server == "docker_sandbox":
             from tools.mcp.docker_sandbox.server import call_tool
         elif server == "gmail":

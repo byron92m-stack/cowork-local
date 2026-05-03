@@ -1,280 +1,125 @@
-"""
-Nodo Tools: Ejecución de herramientas vía MCP.
-
-Este nodo ejecuta herramientas del sistema:
-- filesystem: leer/escribir archivos
-- shell: comandos controlados
-- git: operaciones de control de versiones
-- docker: operaciones con contenedores
-
-Por ahora es un placeholder que delega en el executor.
-La integración MCP completa se hará en la FASE 10.
-"""
-
+"""Nodo de herramientas - Ejecuta operaciones del sistema via MCP."""
 import logging
-import subprocess
-import asyncio
 from typing import Dict, Any
-from ..state import CoworkState
-from tools.mcp_client import get_mcp_client
+from . import CoworkState
 
 logger = logging.getLogger(__name__)
 
-
-# ─── Configuración de comandos permitidos ─────────────────────────
-ALLOWED_SHELL_COMMANDS = [
-    "ls", "cat", "grep", "find", "wc", "tree",
-    "head", "tail", "diff", "stat", "file",
-    # Comandos adicionales para análisis de proyectos
-    "du", "sort", "xargs",
-]
-
-ALLOWED_GIT_OPERATIONS = [
-    "status", "diff", "log", "branch", "show",
-]
-
-
 def tools_node(state: CoworkState) -> Dict[str, Any]:
+    """Ejecuta el paso actual usando las herramientas MCP.
+    
+    Si el paso requiere ejecución de código, usa el Docker Sandbox
+    para aislamiento seguro.
     """
-    Nodo Tools.
+    current = state.get_current_step()
+    if not current:
+        return {"errors": ["No hay paso actual para ejecutar"]}
     
-    Ejecuta herramientas del sistema de forma controlada.
+    logger.info(f"Tools: ejecutando paso {current.id[:8]}... - {current.description}")
     
-    Args:
-        state: Estado global del grafo.
-        
-    Returns:
-        Diccionario con los campos actualizados del estado.
-    """
-    logger.info(f"[Tools] Iniciando. Session: {state.session_id[:8]}...")
-    state.iteration_count += 1
+    from tools.mcp_client import get_mcp_client
+    client = get_mcp_client()
     
-    current_step = state.get_current_step()
+    results = []
+    errors = []
     
-    if current_step is None:
-        logger.warning("[Tools] No hay paso actual")
-        return state.model_dump()
-    
-    # Solo ejecutar pasos asignados a tools
-    if current_step.assigned_to != "tools":
-        return state.model_dump()
-    
-    logger.info(f"[Tools] Ejecutando herramienta: {current_step.description[:100]}")
+    # Determinar qué herramienta usar según la descripción del paso
+    description_lower = current.description.lower()
     
     try:
-        tool_name = current_step.metadata.get("tool_name", "")
-        tool_input = current_step.metadata.get("tool_input", {})
-        
-        # Intentar usar MCP primero
-        mcp = get_mcp_client()
-        
-        if tool_name == "shell" and tool_input.get("command"):
-            # Usar MCP shell o fallback a subprocess
-            try:
-                result = mcp.call_sync("shell", "execute_command", tool_input)
-                logger.info("[Tools] MCP shell ejecutado")
-            except:
-                result = _execute_shell(tool_input)
-        elif tool_name == "git":
-            try:
-                result = mcp.call_sync("git", "git_operation", tool_input)
-                logger.info("[Tools] MCP git ejecutado")
-            except:
-                result = _execute_git(tool_input)
-        elif tool_name == "filesystem":
-            # Detectar qué operación de filesystem
-            operation = tool_input.get("operation", "list")
-            if operation == "read":
-                try:
-                    result = mcp.call_sync("filesystem", "read_file", tool_input)
-                except:
-                    result = _execute_filesystem(tool_input)
-            elif operation == "list":
-                try:
-                    result = mcp.call_sync("filesystem", "list_directory", tool_input)
-                except:
-                    result = _execute_filesystem(tool_input)
+        # Ejecución de código Python en sandbox seguro
+        if any(word in description_lower for word in ["código", "code", "script", "python", "ejecutar código", "run code"]):
+            code = current.metadata.get("code", "")
+            if code:
+                result = client.call_sync("docker_sandbox", "execute_python", {
+                    "code": code,
+                    "timeout": 30
+                })
+                results.append(f"Sandbox Python: {result}")
+                logger.info(f"Código ejecutado en sandbox: {len(code)} caracteres")
             else:
-                result = _execute_filesystem(tool_input)
+                errors.append("No se encontró código para ejecutar")
+        
+        # Operaciones de shell en sandbox
+        elif any(word in description_lower for word in ["shell", "comando", "command", "bash"]):
+            command = current.metadata.get("command", description_lower)
+            result = client.call_sync("docker_sandbox", "execute_shell", {
+                "command": command,
+                "timeout": 30
+            })
+            results.append(f"Sandbox Shell: {result}")
+        
+        # Listar archivos del proyecto
+        elif any(word in description_lower for word in ["listar", "list", "archivos", "files", "directorio", "directory"]):
+            result = client.call_sync("filesystem", "list_directory", {
+                "path": state.project_path
+            })
+            results.append(result)
+        
+        # Leer un archivo específico
+        elif any(word in description_lower for word in ["leer", "read", "contenido", "content"]):
+            filepath = current.metadata.get("filepath", f"{state.project_path}/README.md")
+            result = client.call_sync("filesystem", "read_file", {
+                "path": filepath
+            })
+            results.append(f"Archivo leído:\n{result}")
+        
+        # Búsqueda web
+        elif any(word in description_lower for word in ["buscar", "search", "web", "internet"]):
+            query = current.metadata.get("query", description_lower)
+            result = client.call_sync("websearch", "search", {
+                "query": query
+            })
+            results.append(result)
+        
+        # Git status
+        elif any(word in description_lower for word in ["git", "commit", "branch", "diff"]):
+            result = client.call_sync("git", "git_operation", {
+                "operation": "status"
+            })
+            results.append(result)
+        
+        # Docker status
+        elif any(word in description_lower for word in ["docker", "container", "contenedor"]):
+            result = client.call_sync("docker", "docker_operation", {
+                "operation": "ps"
+            })
+            results.append(result)
+        
+        # Sandbox status
+        elif "sandbox" in description_lower:
+            result = client.call_sync("docker_sandbox", "status", {})
+            results.append(result)
+        
+        # Fallback: ejecutar como comando shell en sandbox
         else:
-            # Detectar automáticamente según la descripción del paso
-            desc = current_step.description.lower()
-            # PRIMERO: verificar si es lectura de archivos (antes que listado)
-            if any(word in desc for word in ["leer contenido", "leer el contenido", "leer archivo", "read file", "cat file"]):
-                project_path = state.project_path or "/media/SSD1T/cowork-local"
-                result = read_python_files(project_path)
-                logger.info(f"[Tools] Leyendo archivos Python del proyecto")
-            # SEGUNDO: verificar si pide recursión o listado completo
-            elif any(cmd in desc for cmd in ["recursivo", "recursiva", "todos los archivos", "subcarpeta", "completa", "cada carpeta", "cada subcarpeta", "estructura completa"]):
-                result = _execute_shell({
-                    "command": "find /media/SSD1T/cowork-local -type f -name '*.py' -not -path '*/venv/*' -not -path '*/__pycache__/*' -not -path '*/.git/*'",
-                    "cwd": "/media/SSD1T/cowork-local"
-                })
-            elif any(cmd in desc for cmd in ["tree"]):
-                result = _execute_shell({
-                    "command": "tree /media/SSD1T/cowork-local -I 'venv|__pycache__|*.pyc' -L 4",
-                    "cwd": "/media/SSD1T/cowork-local"
-                })
-            elif any(cmd in desc for cmd in ["ls", "listar", "lista", "archivos", "directorio", "find", ".py", "python"]):
-                result = _execute_shell({
-                    "command": "find /media/SSD1T/cowork-local -type f -name '*.py' -not -path '*/venv/*' -not -path '*/__pycache__/*' -not -path '*/.git/*'",
-                    "cwd": "/media/SSD1T/cowork-local"
-                })
-            elif "git" in desc:
-                result = _execute_git({"operation": "status", "repo_path": "/media/SSD1T/cowork-local"})
-            else:
-                # Último recurso: si la descripción menciona "proyecto", "estructura", "analizar", etc.
-                # ejecutar find para listar archivos
-                if any(w in desc for w in ["proyecto", "estructura", "analizar", "directorio", "carpeta", "configuración", "dependencias"]):
-                    result = _execute_shell({
-                        "command": "find /media/SSD1T/cowork-local -type f -name '*.py' -not -path '*/venv/*' -not -path '*/__pycache__/*'",
-                        "cwd": "/media/SSD1T/cowork-local"
-                    })
-                else:
-                    result = f"Herramienta no reconocida: {tool_name}. Descripción: {desc[:100]}"
+            result = client.call_sync("docker_sandbox", "execute_shell", {
+                "command": f"echo 'Paso: {current.description}'",
+                "timeout": 10
+            })
+            results.append(result)
         
-        # Guardar resultado
-        state.add_artifact("log", result)
-        state.tools_used.append({
-            "step_id": current_step.id,
-            "tool_name": tool_name,
-            "tool_input": tool_input,
-            "result": result[:500],
-        })
-        
-        current_step.status = "done"
-        logger.info(f"[Tools] Herramienta ejecutada correctamente")
+        # Marcar paso como completado
+        current.status = "done"
         
     except Exception as e:
-        logger.error(f"[Tools] Error: {e}")
-        current_step.status = "failed"
-        state.add_error(f"Error de tools: {str(e)}")
+        logger.error(f"Error ejecutando herramienta: {e}")
+        errors.append(str(e))
+        current.status = "failed"
     
-    return state.model_dump()
-
-
-def _execute_shell(input_data: Dict[str, Any]) -> str:
-    """Ejecuta un comando shell de forma controlada."""
-    command = input_data.get("command", "")
+    # Agregar artefactos con los resultados
+    for i, result in enumerate(results):
+        from ..state import Artifact
+        state.artifacts.append(Artifact(
+            type="tool_call",
+            content=result[:1000] if result else "",
+            metadata={"step_id": current.id, "index": i}
+        ))
     
-    # Verificar que el comando está en la lista blanca
-    cmd_parts = command.split()
-    if not cmd_parts:
-        return "Error: comando vacío"
-    
-    base_cmd = cmd_parts[0]
-    if base_cmd not in ALLOWED_SHELL_COMMANDS:
-        return f"Error: comando '{base_cmd}' no permitido. Permitidos: {ALLOWED_SHELL_COMMANDS}"
-    
-    try:
-        # Usar shell=True para comandos complejos con pipes, comillas, etc.
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            cwd=input_data.get("cwd", "/media/SSD1T/cowork-local"),
-        )
-        output = result.stdout or result.stderr
-        return output[:8000]  # Limitar salida (aumentado para análisis de proyectos)
-    except subprocess.TimeoutExpired:
-        return "Error: timeout del comando (30s)"
-    except Exception as e:
-        return f"Error ejecutando comando: {str(e)}"
-
-
-def _execute_git(input_data: Dict[str, Any]) -> str:
-    """Ejecuta una operación git controlada."""
-    operation = input_data.get("operation", "")
-    
-    if operation not in ALLOWED_GIT_OPERATIONS:
-        return f"Error: operación git '{operation}' no permitida. Permitidas: {ALLOWED_GIT_OPERATIONS}"
-    
-    repo_path = input_data.get("repo_path", "/media/SSD1T/cowork-local")
-    
-    try:
-        result = subprocess.run(
-            ["git", operation],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            cwd=repo_path,
-        )
-        output = result.stdout or result.stderr
-        return output[:8000]
-    except subprocess.TimeoutExpired:
-        return "Error: timeout de git (30s)"
-    except Exception as e:
-        return f"Error en operación git: {str(e)}"
-
-
-def _execute_filesystem(input_data: Dict[str, Any]) -> str:
-    """Ejecuta operaciones de filesystem controladas."""
-    operation = input_data.get("operation", "read")
-    path = input_data.get("path", "")
-    
-    # Por ahora solo lectura
-    if operation == "read":
-        try:
-            with open(path, "r") as f:
-                content = f.read()
-            return content[:8000]
-        except FileNotFoundError:
-            return f"Error: archivo no encontrado: {path}"
-        except Exception as e:
-            return f"Error leyendo archivo: {str(e)}"
-    
-    elif operation == "list":
-        import os
-        try:
-            files = os.listdir(path or ".")
-            return "\n".join(files[:100])
-        except Exception as e:
-            return f"Error listando directorio: {str(e)}"
-    
-    return f"Operación no soportada: {operation}"
-
-# ─── Función auxiliar: leer archivos Python del proyecto ─────────
-def read_python_files(project_path: str, max_files: int = 15) -> str:
-    """
-    Lee todos los archivos .py de un proyecto (excluyendo venv, __pycache__)
-    y devuelve un string con el contenido de cada uno, formateado para Qwen.
-    
-    Args:
-        project_path: Ruta raíz del proyecto.
-        max_files: Máximo de archivos a leer (evita sobrecarga de contexto).
-        
-    Returns:
-        String con formato: "Archivo: ruta\n```python\ncontenido\n```\n\n"
-    """
-    import os
-    python_files = []
-    
-    # Buscar archivos .py
-    for root, dirs, files in os.walk(project_path):
-        # Excluir directorios que no son del proyecto
-        dirs[:] = [d for d in dirs if d not in ('venv', '__pycache__', '.git', 'node_modules')]
-        for f in files:
-            if f.endswith('.py'):
-                full_path = os.path.join(root, f)
-                python_files.append(full_path)
-    
-    # Limitar cantidad
-    python_files = python_files[:max_files]
-    
-    # Leer cada archivo
-    result_parts = []
-    for filepath in sorted(python_files):
-        try:
-            with open(filepath, 'r') as f:
-                content = f.read()
-            # Truncar archivos muy largos a 3000 caracteres
-            if len(content) > 3000:
-                content = content[:3000] + "\n# ... (truncado)"
-            relative_path = os.path.relpath(filepath, project_path)
-            result_parts.append(f"### Archivo: {relative_path}\n```python\n{content}\n```")
-        except Exception as e:
-            result_parts.append(f"### Archivo: {filepath}\nError al leer: {e}")
-    
-    return "\n\n".join(result_parts)
+    return {
+        "plan": state.plan,
+        "artifacts": state.artifacts,
+        "errors": state.errors + errors,
+        "current_step_id": current.id,
+        "metadata": state.metadata
+    }

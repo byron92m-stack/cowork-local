@@ -1,23 +1,16 @@
 """
 Cowork-Local API: Endpoints REST con FastAPI.
-
-Endpoints:
-- POST /run          → Ejecutar una tarea agentic
-- GET /session/{id}  → Ver una sesión guardada
-- GET /sessions      → Listar sesiones recientes
-- GET /stats         → Estadísticas de la base de datos
-- GET /health        → Health check
+Streaming support with Server-Sent Events (SSE).
 """
-
 import sys
 import os
 from pathlib import Path
 
-# Agregar el proyecto al path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import uvicorn
@@ -28,28 +21,39 @@ from graph.graph import run_graph
 from tools.python_tools.db_tools import (
     get_session, get_artifacts_by_session, get_stats, get_project_memory
 )
+from apps.api.streaming import setup_streaming_routes
 
 # ─── Función helper para conexión a DB ───────────────────────
 def _get_db_connection():
-    """Crea una conexión a PostgreSQL usando variables de entorno."""
     return psycopg2.connect(
         host=os.getenv("POSTGRES_HOST", "localhost"),
         port=os.getenv("POSTGRES_PORT", "5432"),
         user=os.getenv("POSTGRES_USER", "cowork"),
-        password=os.getenv("POSTGRES_PASSWORD", "coworkpass"),
+        password=os.getenv("POSTGRES_PASSWORD"),
         database=os.getenv("POSTGRES_DB", "coworkdb"),
     )
 
 def _get_default_project():
-    """Devuelve el proyecto por defecto desde variable de entorno."""
     return os.getenv("COWORK_ROOT", str(PROJECT_ROOT))
 
 # ─── Inicializar la app ───────────────────────────────────────
 app = FastAPI(
     title="Cowork-Local API",
-    description="API REST para el asistente agentic de desarrollo Cowork-Local",
-    version="1.0.0",
+    description="API REST for agentic development assistant with streaming support",
+    version="2.0.0",
 )
+
+# CORS para el frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Setup streaming routes
+app = setup_streaming_routes(app)
 
 # ─── Modelos de datos ─────────────────────────────────────────
 class RunRequest(BaseModel):
@@ -73,16 +77,20 @@ class RunResponse(BaseModel):
 
 @app.get("/health")
 async def health():
-    """Health check: verifica que la API está corriendo."""
-    return {"status": "ok", "service": "cowork-local-api"}
+    return {
+        "status": "ok",
+        "service": "cowork-local-api",
+        "version": "2.0.0",
+        "features": ["streaming", "docker-sandbox", "parallel-execution"]
+    }
 
 
 @app.post("/run", response_model=RunResponse)
 async def run_task(request: RunRequest):
-    """Ejecuta una tarea agentic y devuelve el resultado."""
+    """Execute an agentic task."""
     try:
         if not os.getenv("DEEPSEEK_API_KEY"):
-            raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY no configurada")
+            raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY not configured")
         
         final_state = run_graph(
             user_query=request.query,
@@ -98,7 +106,7 @@ async def run_task(request: RunRequest):
             total_steps=len(final_state.plan),
             artifacts_count=len(final_state.artifacts),
             errors_count=len(final_state.errors),
-            message=f"Tarea completada: {steps_done}/{len(final_state.plan)} pasos",
+            message=f"Task completed: {steps_done}/{len(final_state.plan)} steps",
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -106,10 +114,10 @@ async def run_task(request: RunRequest):
 
 @app.get("/session/{session_id}")
 async def get_session_endpoint(session_id: str):
-    """Recupera una sesión guardada con sus artefactos."""
+    """Get a saved session with artifacts."""
     session = get_session(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+        raise HTTPException(status_code=404, detail="Session not found")
     
     for field in ["created_at", "updated_at"]:
         if session.get(field):
@@ -130,7 +138,7 @@ async def get_session_endpoint(session_id: str):
 
 @app.get("/sessions")
 async def list_sessions(limit: int = 10):
-    """Lista las sesiones recientes."""
+    """List recent sessions."""
     conn = _get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("""
@@ -154,15 +162,37 @@ async def list_sessions(limit: int = 10):
 
 @app.get("/stats")
 async def get_stats_endpoint():
-    """Devuelve estadísticas de uso del sistema."""
+    """Get system statistics."""
     stats = get_stats()
     memory = get_project_memory(_get_default_project())
     stats["project_summary"] = memory.get("summary", "") if memory else ""
     return stats
 
 
-# ─── Iniciar el servidor ──────────────────────────────────────
+@app.get("/endpoints")
+async def list_endpoints():
+    """List all available endpoints."""
+    return {
+        "rest": [
+            "GET  /health",
+            "POST /run",
+            "GET  /session/{id}",
+            "GET  /sessions",
+            "GET  /stats",
+        ],
+        "streaming": [
+            "POST /stream/run   - Full agentic workflow",
+            "POST /stream/chat  - DeepSeek chat",
+            "POST /stream/qwen  - Local Qwen GPU chat",
+            "GET  /stream/demo  - SSE demo",
+        ],
+        "docs": "/docs"
+    }
+
+
 if __name__ == "__main__":
-    print("🖥️  Cowork-Local API en http://localhost:8000")
-    print("📖 Swagger UI: http://localhost:8000/docs")
+    print("🖥️  Cowork-Local API v2.0")
+    print("📡 REST: http://localhost:8000")
+    print("📡 Stream: http://localhost:8000/stream/demo")
+    print("📖 Swagger: http://localhost:8000/docs")
     uvicorn.run(app, host="0.0.0.0", port=8000)

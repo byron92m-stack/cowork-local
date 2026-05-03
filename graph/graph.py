@@ -4,7 +4,11 @@ from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END
 from langgraph.constants import Send
 from .state import CoworkState
-from .nodes import supervisor_node, executor_node, reviewer_node, tools_node, memory_manager_node
+from .nodes.supervisor import supervisor_node
+from .nodes.executor import executor_node
+from .nodes.reviewer import reviewer_node
+from .nodes.memory_manager import memory_manager_node
+from .nodes.tools_node import tools_node
 
 logger = logging.getLogger(__name__)
 

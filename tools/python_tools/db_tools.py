@@ -23,7 +23,7 @@ DB_CONFIG = {
     "host": os.getenv("POSTGRES_HOST", "localhost"),
     "port": int(os.getenv("POSTGRES_PORT", 5432)),
     "user": os.getenv("POSTGRES_USER", "cowork"),
-    "password": os.getenv("POSTGRES_PASSWORD", "coworkpass"),
+    "password": os.getenv("POSTGRES_PASSWORD"),
     "database": os.getenv("POSTGRES_DB", "coworkdb"),
 }
 

@@ -1,0 +1,123 @@
+# ============================================
+# Cowork-Local: Configuración Global
+# ============================================
+#
+# Todas las rutas aceptan variables de entorno:
+#   ${COWORK_ROOT}     -> Directorio raíz del proyecto
+#   ${COWORK_DATA}     -> Directorio de datos
+#   ${COWORK_PROJECTS} -> Repositorios a analizar
+#   ${OLLAMA_MODELS}   -> Modelos de Ollama
+#   ${DOCKER_DATA}     -> Volúmenes Docker
+# ============================================
+
+# --- Rutas del sistema ---
+paths:
+  project_root: "${COWORK_ROOT:-/media/SSD1T/cowork-local}"
+  data_dir: "${COWORK_DATA:-/media/SSD1T/cowork-local/data}"
+  logs_dir: "${COWORK_LOGS:-/media/SSD1T/cowork-local/data/logs}"
+  projects_dir: "${COWORK_PROJECTS:-/media/SSD1T/projects}"
+  ollama_models_dir: "${OLLAMA_MODELS:-/media/SSD1T/ollama-models}"
+  docker_data_dir: "${DOCKER_DATA:-/media/SSD1T/docker-data}"
+  mcp_servers_dir: "${COWORK_ROOT:-/media/SSD1T/cowork-local}/tools/mcp"
+
+# --- Base de datos (PostgreSQL) ---
+database:
+  host: "${POSTGRES_HOST:-localhost}"
+  port: "${POSTGRES_PORT:-5432}"
+  user: "${POSTGRES_USER:-cowork}"
+  password: "${POSTGRES_PASSWORD:-coworkpass}"
+  database: "${POSTGRES_DB:-coworkdb}"
+  # String de conexión: postgresql://cowork:coworkpass@localhost:5432/coworkdb
+
+# --- Proveedores de IA ---
+providers:
+  supervisor:
+    provider: "deepseek"
+    model: "deepseek-chat"
+    base_url: "https://api.deepseek.com/v1"
+    api_key_env: "DEEPSEEK_API_KEY"
+    max_tokens: 4096
+    temperature: 0.1              # Bajo para planificación más precisa
+  
+  executor:
+    provider: "ollama"
+    model: "qwen2.5:14b"
+    base_url: "${OLLAMA_BASE_URL:-http://127.0.0.1:11434}"
+    max_tokens: 2048
+    temperature: 0.2              # Bajo para generación de código más precisa
+
+# --- LangGraph ---
+langgraph:
+  max_iterations: 10              # Máximo de ciclos plan→ejecutar→revisar
+  recursion_limit: 25             # Límite de recursión del grafo
+  checkpoint_db: "postgres"       # Dónde guardar checkpoints (postgres o memory)
+
+# --- MCP Servers (Model Context Protocol) ---
+mcp:
+  enabled: true
+  servers:
+    filesystem:
+      enabled: true
+      allowed_paths:
+        - "${COWORK_ROOT:-/media/SSD1T/cowork-local}"
+        - "${COWORK_PROJECTS:-/media/SSD1T/projects}"
+      readonly: false
+    shell:
+      enabled: true
+      allowed_commands:
+        - "ls"
+        - "cat"
+        - "grep"
+        - "find"
+        - "wc"
+        - "tree"
+        - "head"
+        - "tail"
+        - "diff"
+        - "stat"
+        - "file"
+      blocked_commands:
+        - "rm"
+        - "mv"
+        - "dd"
+        - "mkfs"
+        - "shutdown"
+        - "reboot"
+    git:
+      enabled: true
+      allowed_operations:
+        - "status"
+        - "diff"
+        - "log"
+        - "branch"
+        - "show"
+      blocked_operations:
+        - "push"
+        - "commit"
+        - "merge"
+        - "rebase"
+    docker:
+      enabled: true
+      allowed_operations:
+        - "ps"
+        - "logs"
+        - "inspect"
+      blocked_operations:
+        - "rm"
+        - "stop"
+        - "kill"
+        - "prune"
+
+# --- Logging ---
+logging:
+  level: "${LOG_LEVEL:-INFO}"            # DEBUG, INFO, WARNING, ERROR
+  format: "structured"                   # structured (JSON) o simple
+  file: "${COWORK_LOGS:-/media/SSD1T/cowork-local/data/logs}/cowork.log"
+  max_size_mb: 100
+  backup_count: 5
+
+# --- Seguridad ---
+security:
+  require_confirmation_for_writes: true   # Pedir confirmación antes de escribir archivos
+  require_confirmation_for_shell: true    # Pedir confirmación antes de comandos shell
+  sandbox_mode: false                     # Modo sandbox total (sin escritura)

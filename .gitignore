@@ -1,0 +1,31 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Variables de entorno
+.env
+
+# Datos generados
+data/logs/*
+data/projects/*
+!data/logs/.gitkeep
+!data/projects/.gitkeep
+
+# Docker
+infra/docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Backup locales
+*.tar.gz

@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: cowork-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cowork}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coworkpass}
+      POSTGRES_DB: ${POSTGRES_DB:-coworkdb}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./postgres_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cowork} -d ${POSTGRES_DB:-coworkdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cowork-net
+
+networks:
+  cowork-net:
+    driver: bridge
+    name: cowork-net

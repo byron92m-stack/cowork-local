@@ -1,0 +1,21 @@
+#!/bin/bash
+# Cowork-Local: Script de entrada
+# Uso: ./cowork [comando]
+
+# Detectar automáticamente el directorio del proyecto
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+VENV_PYTHON="$PROJECT_ROOT/venv/bin/python"
+
+# Si no hay venv, usar python3 del sistema
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="python3"
+fi
+
+# Cargar variables de entorno si existe .env
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    set -a
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
+exec $VENV_PYTHON -m apps.cli.main "$@"

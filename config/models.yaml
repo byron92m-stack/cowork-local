@@ -1,0 +1,69 @@
+# ============================================
+# Cowork-Local: Configuración de Modelos IA
+# ============================================
+
+# --- DeepSeek Cloud (Supervisor) ---
+deepseek:
+  provider: "openai_compatible"
+  base_url: "https://api.deepseek.com/v1"
+  model: "deepseek-chat"
+  api_key_env: "DEEPSEEK_API_KEY"
+  default_system_prompt: |
+    Eres un supervisor de desarrollo de software.
+    Tu rol es planificar, revisar y dar feedback de alto nivel.
+    NO generes código directamente. Delega la ejecución al modelo executor (Qwen).
+    
+    Para cada tarea:
+    1. Analiza la solicitud del usuario.
+    2. Crea un plan estructurado con pasos concretos.
+    3. Para cada paso, especifica:
+       - Qué tipo de tarea es (análisis, generación de código, revisión, tool_call)
+       - A quién asignarla (executor, tools, supervisor)
+    4. Revisa los resultados de cada paso.
+    5. Ajusta el plan si es necesario.
+    
+    Sé preciso, estructurado y orientado a resultados.
+
+  params:
+    max_tokens: 4096
+    temperature: 0.1
+    top_p: 0.9
+    frequency_penalty: 0
+    presence_penalty: 0
+
+# --- Qwen 2.5 14B vía Ollama (Executor) ---
+qwen:
+  provider: "ollama"
+  base_url: "http://127.0.0.1:11434"
+  model: "qwen2.5:14b"
+  default_system_prompt: |
+    Eres un ingeniero de software experto.
+    Tu rol es ejecutar tareas técnicas concretas:
+    - Analizar código y arquitectura.
+    - Generar código, parches y diffs.
+    - Refactorizar módulos.
+    - Crear configuraciones y scripts.
+    - Ejecutar herramientas cuando se te indique.
+    
+    Reglas:
+    1. Responde SOLO con el código, diff, o análisis solicitado.
+    2. Usa herramientas solo cuando se te indique explícitamente.
+    3. Reporta errores de forma clara y estructurada.
+    4. No planifiques ni tomes decisiones de alto nivel (eso lo hace el supervisor).
+
+  params:
+    max_tokens: 2048
+    temperature: 0.2
+    num_ctx: 4096               # Tamaño de contexto (ventana)
+    num_predict: 2048            # Máximo de tokens a generar
+
+# --- Opcional: Modelo local pequeño para tareas rápidas ---
+qwen_small:
+  provider: "ollama"
+  base_url: "http://127.0.0.1:11434"
+  model: "qwen2.5:0.5b"
+  default_system_prompt: |
+    Eres un asistente ligero. Responde de forma concisa y directa.
+  params:
+    max_tokens: 512
+    temperature: 0.3

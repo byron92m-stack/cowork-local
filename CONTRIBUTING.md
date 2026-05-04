@@ -1,16 +1,16 @@
 # Contributing to Cowork-Local
 
-Thanks for your interest in contributing to Cowork-Local!
+Thanks for your interest in contributing to Cowork-Local.
 
 ## Development Environment Setup
 
-git clone https://github.com/YOUR_USERNAME/cowork-local.git
+git clone https://github.com/byron92m-stack/cowork-local.git
 cd cowork-local
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 docker compose -f infra/docker-compose.yml up -d
-ollama pull qwen2.5:14b
+ollama pull qwen3:14b
 cp .env.example .env
 ./cowork check
 
@@ -21,6 +21,14 @@ cp .env.example .env
 - Ollama installed and running
 - DeepSeek API key (platform.deepseek.com)
 - Git
+
+## Project Statistics
+
+- 80 files total, 56 Python files, 4,781 lines of code
+- 12 MCP Servers (filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, filewatcher, gmail, googledrive, notion, skills)
+- 5 LangGraph nodes (supervisor, executor, reviewer, tools_node, memory_manager)
+- 7 PostgreSQL tables (sessions, steps, artifacts, tool_usage, errors, project_memory, scheduled_tasks)
+- 10 Git commits, clean history
 
 ## Code Style
 
@@ -40,9 +48,10 @@ cp .env.example .env
 4. Add Artifact types in state.py if needed
 
 ### Adding a New MCP Server
-1. Create tools/mcp/name/server.py with call_tool function
-2. Register in tools/mcp_client.py
-3. Add security rules to config/settings.yaml
+1. Create tools/mcp/name/ with __init__.py and server.py
+2. Implement call_tool(tool_name, arguments) function
+3. Register in tools/mcp_client.py in the server mapping
+4. Add security rules to config/settings.yaml
 
 ### Adding a New Skill
 1. Add tool definition to tools/mcp/skills/server.py

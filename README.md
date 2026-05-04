@@ -1,27 +1,34 @@
-# Cowork-Local
+# Cowork-Local v2.0
 
-## Agentic Development Assistant — Running Locally on Fedora 43
+## Agentic Development Assistant - Running Locally on Fedora 43
 
-Cowork-Local is a fully autonomous AI-powered development assistant that plans, executes, reviews, and remembers — all running on your own hardware. It combines DeepSeek Cloud for reasoning with Qwen 2.5 14B running locally on GPU for code generation, orchestrated by LangGraph with persistent memory via PostgreSQL.
+Cowork-Local is a fully autonomous AI-powered development assistant that plans, executes, reviews, and remembers, all running on your own hardware. It combines DeepSeek Cloud for strategic reasoning with Qwen 3 14B running locally on GPU for code generation, orchestrated by LangGraph with persistent memory via PostgreSQL.
 
 ## System Architecture
 
-The system has five layers: Supervisor (DeepSeek Cloud, plans), Executor (Qwen 14B GPU, codes), Reviewer (DeepSeek Cloud, evaluates), MCP Tools (Filesystem, Shell, Git, Docker, Skills), and PostgreSQL (persistent memory). All orchestrated by LangGraph with four interfaces: CLI, REST API, Streamlit Dashboard, and Swagger UI.
+The system has five layers: Supervisor (DeepSeek Cloud, plans), Executor (Qwen 3 14B GPU, generates real code), Reviewer (DeepSeek Cloud, evaluates), 12 MCP Tools (Filesystem, Shell, Git, Docker, Browser, WebSearch, Docker Sandbox, Code Sandbox, File Watcher, Gmail, Google Drive, Notion, Skills), and PostgreSQL with 7 tables for persistent memory. All orchestrated by LangGraph with four interfaces: CLI, API REST with SSE streaming, Streamlit Web UI, and Qwen CLI direct chat.
 
 ## Agentic Flow
 
-User query flows through: MEMORY loads context from PostgreSQL, SUPERVISOR generates JSON plan with DeepSeek, TOOLS execute system operations when needed, EXECUTOR generates code on Qwen GPU, REVIEWER evaluates results with DeepSeek, MEMORY persists everything back to PostgreSQL. Cycle repeats until all steps complete.
+User query flows through: MEMORY loads context from PostgreSQL, SUPERVISOR generates JSON plan with DeepSeek (5-7 steps), TOOLS execute system operations (read files, list directories), EXECUTOR generates real code with Qwen 3 GPU, REVIEWER evaluates results with DeepSeek, MEMORY saves generated files to disk and persists everything to PostgreSQL. Cycle repeats until all steps complete.
 
 ## Key Features
 
-- Multi-Agent Architecture: Supervisor plans, Executor codes, Reviewer evaluates
-- Local GPU Execution: Qwen 2.5 14B on NVIDIA RTX 4060 Ti 16GB VRAM
-- Real System Tools: Filesystem, Shell, Git, Docker via MCP protocol
-- 14 Advanced Skills: PDF, Excel, PowerPoint, Charts, Email, Web Search, GitHub, Slack, GitLab, Notion
-- Persistent Memory: PostgreSQL with 6 tables for sessions, steps, artifacts, tool usage, errors, project memory
-- Multiple Interfaces: CLI, REST API with Swagger, Streamlit Chat with live progress, Streamlit Dashboard
+- Multi-Agent Architecture: Supervisor plans, Executor generates real code, Reviewer evaluates
+- Local GPU Execution: Qwen 3 14B on NVIDIA RTX 4060 Ti 16GB VRAM with visible reasoning
+- 12 MCP Servers: Filesystem, Shell, Git, Docker, Browser, WebSearch, Code Sandbox, Docker Sandbox, File Watcher, Gmail, Google Drive, Notion, Skills
+- Docker VM Sandbox: Secure isolated code execution with no network, read-only filesystem, resource limits
+- SSE Streaming: Real-time token streaming like Claude Cowork
+- File Watcher: Detects file changes and auto-triggers agents
+- 20+ Advanced Skills: PDF, Excel, PowerPoint, Charts, Email, Web Search, GitHub, Slack, GitLab, Notion
+- Persistent Memory: PostgreSQL with 7 tables (sessions, steps, artifacts, tool_usage, errors, project_memory, scheduled_tasks)
+- Multiple Interfaces: CLI, REST API with SSE streaming, Streamlit Web UI with dark theme, Qwen CLI direct chat
+- Plugin Marketplace: YAML-based skill templates with versioning
+- Knowledge Base: Document storage with search
+- Workspace Manager: Multi-project persistent workspaces
+- Prompt Injection Defenses: Pattern-based detection and input sanitization
 - Ultra Low Cost: approximately 0.50 USD per month for DeepSeek API only
-- 100 Percent Yours: No cloud dependencies, fully open-source, runs on your hardware
+- 100 Percent Yours: No cloud dependencies, fully open-source (MIT), runs on your hardware
 
 ## Hardware and Infrastructure
 
@@ -31,42 +38,51 @@ User query flows through: MEMORY loads context from PostgreSQL, SUPERVISOR gener
 - RAM: 32 GB
 - System Disk: NVMe 2TB (Btrfs)
 - Project Disk: SSD 1TB (ext4)
-- Local Model: Qwen 2.5 14B (Q4_K_M quantization, 8.9 GB)
+- Local Model: Qwen 3 14B (Q4_K_M quantization, 9.3 GB)
 
 ## Monthly Costs
 
-Hardware is 0 dollars already owned. DeepSeek API approximately 0.50 dollars for heavy usage. Qwen Local GPU is 0 dollars running on your GPU. Streamlit, FastAPI, PostgreSQL, and MCP Servers are all 0 dollars open-source. Total approximately 0.50 dollars per month.
+Hardware is 0 dollars already owned. DeepSeek API approximately 0.50 dollars for heavy usage. Qwen 3 Local GPU is 0 dollars running on your GPU. Streamlit, FastAPI, PostgreSQL, and MCP Servers are all 0 dollars open-source. Total approximately 0.50 dollars per month.
 
 ## Project Structure
 
-cowork-local directory contains:
-- apps with api (FastAPI REST 6 endpoints), cli (check status run commands), and web with Streamlit Dashboard and Real-time Agentic Chat
-- config with settings.yaml for global configuration and models.yaml for AI model settings
-- graph with main LangGraph graph, CoworkState definition, and nodes for supervisor, executor, reviewer, tools_node, and memory_manager
-- models with DeepSeek Cloud HTTP client and Ollama Qwen client
-- tools with MCP servers for filesystem, shell, git, docker, and skills, plus unified MCP client and PostgreSQL helper functions
-- infra with Docker Compose for PostgreSQL and database schema SQL with 6 tables
-- data directories for generated files and execution logs
-- requirements.txt, cowork executable script, and .env.example template
+- apps: API (FastAPI REST + SSE streaming), CLI (check, status, run), Web (Streamlit Dashboard, Real-time Chat, Pro UI)
+- config: settings.yaml (global configuration with env vars), models.yaml (AI model settings)
+- graph: Main LangGraph graph, CoworkState definition, 5 nodes (supervisor, executor, reviewer, tools_node, memory_manager)
+- models: DeepSeek Cloud HTTP client, Ollama Qwen client
+- tools: 12 MCP servers (filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, filewatcher, gmail, googledrive, notion, skills), unified MCP client, PostgreSQL helpers, scheduler, security, knowledge_base, workspace_manager, auto_executor, notifier
+- infra: Docker Compose for PostgreSQL, database schema SQL with 7 tables
+- plugins: Plugin manager, skill template YAML, catalog directory
+- data: Generated files, logs, chats, knowledge base, workspaces
+- Documentation: README, ARCHITECTURE, CONTRIBUTING, SECURITY, LICENSE, COWORK_PLAN
+- Scripts: cowork (main CLI), cowork_chat.sh (direct Qwen 3 chat)
 
 ## PostgreSQL Schema
 
-Six tables provide complete persistence:
-- sessions: conversation and task registry with id, user_query, project_path, status, metadata, timestamps
-- steps: plan steps with id, session_id, step_sequence, description, status, assigned_to, metadata
-- artifacts: generated results with id, session_id, step_id, type, path, content, metadata
-- tool_usage: audit trail with id, session_id, step_id, tool_name, tool_input, tool_output, duration_ms
-- errors: debugging with id, session_id, step_id, error_message, error_type
-- project_memory: cross-session context with id, project_path unique, summary, architecture_notes, key_decisions, last_analyzed
+Seven tables provide complete persistence:
+- sessions: conversation and task registry
+- steps: plan steps with description, status, assigned_to
+- artifacts: generated results (code, analysis, PDFs)
+- tool_usage: audit trail for every tool call
+- errors: debugging and error tracking
+- project_memory: cross-session persistent context
+- scheduled_tasks: CRON-based recurring tasks
 
-## MCP Servers and Tools
+## MCP Servers (12 Total)
 
-Five MCP servers provide system access:
 - Filesystem: read_file, write_file, list_directory, search_files with whitelisted paths
-- Shell: execute_command with whitelisted commands and destructive commands blocked
-- Git: git_operation read-only for status, diff, log, branch, show
-- Docker: docker_operation read-only for ps, logs, inspect, stats, version
-- Skills: 10 advanced tools for PDF, Excel, PowerPoint, Charts, Email, Web Search, GitHub, GitLab, Slack, Data Analysis
+- Shell: execute_command with whitelisted commands
+- Git: git_operation read-only (status, diff, log, branch, show)
+- Docker: docker_operation read-only (ps, logs, inspect, stats, version)
+- Browser: navigate, click, fill, screenshot, extract
+- WebSearch: search, news, fetch_page via DuckDuckGo
+- Code Sandbox: execute_python, execute_shell, install_package
+- Docker Sandbox: execute_python, execute_shell with full VM isolation (no network, read-only, resource limits)
+- File Watcher: start_watching, stop_watching, get_changes, analyze_and_act
+- Gmail: send_email, read_emails via OAuth/App Password
+- Google Drive: list_files, upload_file, download_file, share_file
+- Notion: create_page, search_pages
+- Skills: 20+ advanced tools
 
 ## Advanced Skills
 
@@ -74,23 +90,45 @@ PDF Generator uses reportlab for formatted PDF files. Excel Generator uses openp
 
 ## User Interfaces
 
-CLI available via ./cowork run, check, status commands in terminal. Chat Realtime on port 8502 at localhost with live progress display. Dashboard on port 8501 at localhost as control panel. REST API on port 8000 at localhost with HTTP endpoints. Swagger UI on port 8000 at localhost/docs for interactive documentation.
-
-## Python Packages
-
-Key packages include: langgraph for agentic orchestration, pydantic for data validation, fastapi and uvicorn for REST API, streamlit for web UI, mcp for Model Context Protocol, openai for DeepSeek client, httpx for async HTTP, psycopg2 for PostgreSQL, reportlab for PDF, openpyxl for Excel, python-pptx for PowerPoint, matplotlib for charts, pandas for data analysis, yagmail for email, ddgs for web search, PyGithub for GitHub, slack-sdk for Slack, notion-client for Notion, python-gitlab for GitLab, google-api-python-client for Google APIs.
+- CLI Agentic: ./cowork run --query "your task" --project /path
+- CLI Check: ./cowork check (verifies all services)
+- Direct Qwen Chat: ./cowork_chat.sh (interactive chat with Qwen 3)
+- Native Qwen CLI: ollama run qwen3:14b
+- REST API: python -m apps.api.main on port 8000
+- SSE Streaming: /stream/run, /stream/chat, /stream/qwen, /stream/demo
+- Swagger UI: http://localhost:8000/docs
+- Web UI: Streamlit Dashboard on port 8501
 
 ## Quick Start
 
-Prerequisites: Python 3.12 plus with venv, Docker for PostgreSQL, Ollama with qwen2.5:14b pulled, DeepSeek API key from platform.deepseek.com.
+Prerequisites: Python 3.12+ with venv, Docker for PostgreSQL, Ollama with qwen3:14b pulled, DeepSeek API key from platform.deepseek.com.
 
-Installation: git clone the repo, create and activate venv, pip install -r requirements.txt, ollama pull qwen2.5:14b, cp .env.example .env and edit with your keys, docker compose -f infra/docker-compose.yml up -d, run ./cowork check to verify.
+Installation: git clone the repo, create and activate venv, pip install -r requirements.txt, ollama pull qwen3:14b, cp .env.example .env and edit with your keys, docker compose -f infra/docker-compose.yml up -d, run ./cowork check to verify.
 
-Usage: ./cowork check verifies services, ./cowork status shows system state, ./cowork run --query "your task" executes a task. Streamlit Dashboard on port 8501. Real-time Chat on port 8502. REST API via python -m apps.api.main on port 8000, with Swagger UI at localhost:8000/docs.
+Usage: ./cowork check verifies services, ./cowork status shows system state, ./cowork run --query "your task" executes an agentic task, ./cowork_chat.sh opens direct chat with Qwen 3. REST API via python -m apps.api.main on port 8000 with Swagger UI at /docs. Streamlit Web UI on port 8501.
 
 ## Key Achievements
 
-Complete agentic system with DeepSeek plus Qwen GPU working together. Five MCP servers operational for Filesystem, Shell, Git, Docker, and Skills. Fourteen advanced skills including PDF, Excel, PowerPoint, Charts, Email, Web, GitHub. Real-time chat with step-by-step progress display. REST API with Swagger for external integrations. Web dashboard with statistics and monitoring. PostgreSQL with six tables for complete persistence. Plan to Execute to Review to Persist cycle fully functional. Open-source, fully yours, no cloud vendor lock-in. Total cost approximately 0.50 dollars per month for DeepSeek API only.
+- Complete agentic system with DeepSeek planning + Qwen 3 GPU code generation
+- 12 MCP servers operational
+- 20+ advanced skills
+- Real-time SSE streaming like Claude Cowork
+- Docker VM sandbox for secure code execution
+- File watcher with auto-execution
+- REST API with Swagger and SSE streaming
+- PostgreSQL with 7 tables for complete persistence
+- Plan-Execute-Review-Persist cycle fully functional
+- Autonomous project generation (generated complete FastAPI library API with 5 files)
+- Plugin marketplace with YAML templates
+- Knowledge base with search
+- Multi-workspace support
+- Prompt injection defenses
+- Open-source (MIT), multiplatform, no cloud vendor lock-in
+- Total cost: approximately 0.50 USD per month
+
+## Compare with Claude Cowork
+
+Claude Cowork costs 60 dollars per month, runs only on macOS, and is proprietary. Cowork-Local costs 0.50 dollars per month, runs on Linux, macOS, and Windows, and is fully open-source. Both have: multi-agent architecture, real-time streaming, sandbox execution, file watching, scheduled tasks, web search, email integration, knowledge base, and plugin systems.
 
 ## License
 

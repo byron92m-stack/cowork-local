@@ -5,7 +5,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-ALLOWED_PATHS = ["/media/SSD1T/cowork-local", "/media/SSD1T/projects"]
+ALLOWED_PATHS = ["/media/SSD1T/cowork-local", "/media/SSD1T/projects", "/tmp", "/media/SSD1T"]
 server = Server("cowork-filesystem")
 
 def _allowed(path: str) -> bool:

@@ -29,3 +29,7 @@ Thumbs.db
 
 # Backup locales
 *.tar.gz
+output/
+cowork-vscode/
+node_modules/
+cowork-vscode/

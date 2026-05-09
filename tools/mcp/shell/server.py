@@ -5,8 +5,8 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-ALLOWED = ["ls","cat","grep","find","wc","tree","head","tail","diff","stat","file","du","sort","echo","pwd","which","python","python3","git","docker"]
-BLOCKED = ["rm","mv","dd","mkfs","shutdown","reboot","sudo","su"]
+ALLOWED = ["ls","cat","grep","find","wc","tree","head","tail","diff","stat","file","du","sort","echo","pwd","which","python","python3","git","docker","rm","mkdir","rmdir","cd","/media/SSD1T/cowork-local/apps/cli/loop.sh"]
+BLOCKED = ["mv","dd","mkfs","shutdown","reboot","sudo","su"]
 server = Server("cowork-shell")
 
 @server.list_tools()

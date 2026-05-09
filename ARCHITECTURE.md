@@ -1,171 +1,85 @@
-# Architecture
+# Architecture — Cowork-Local v3.1 (Unified)
 
 ## Overview
 
-Cowork-Local implements a multi-agent architecture using LangGraph as the orchestrator. Three specialized agents collaborate through a structured cycle: Memory, Plan, Execute, Review, Persist. The system splits intelligence across two models for cost efficiency: DeepSeek Cloud handles high-level reasoning (planning and reviewing), while Qwen 3 14B runs locally on GPU for code generation and analysis, all for approximately 0.50 USD per month.
+Cowork-Local v3.1 implements a unified agentic architecture with Claude Code CLI as the single interface offering two modes: Cowork (autonomous graph execution) and Chat (conversational DeepSeek). DeepSeek Cloud is the brain, LangGraph orchestrates a 6-node graph, Qwen 3 14B on Ollama GPU generates code, and 12 MCP servers provide real file operations.
 
-## System Architecture
+Total cost: approximately 0.50 USD per month (DeepSeek API only).
 
-The system has five main layers: Supervisor (DeepSeek Cloud, plans), Executor (Qwen 3 14B GPU, generates real code), Reviewer (DeepSeek Cloud, evaluates), 12 MCP Tools (Filesystem, Shell, Git, Docker, Browser, WebSearch, Code Sandbox, Docker Sandbox, File Watcher, Gmail, Google Drive, Notion, Skills), and PostgreSQL with 7 tables (persistent memory). All orchestrated by LangGraph with four interfaces: CLI, REST API with SSE streaming, Streamlit Web UI, and direct Qwen CLI chat.
+## Two Modes Unified
 
-## Agentic Flow
+### Cowork Mode (prefix: "cowork:")
+When the user types "cowork: task", the proxy intercepts the message before sending to DeepSeek. Instead, it calls apps/cli/loop.sh which executes the full LangGraph pipeline:
 
-The flow follows this sequence: MEMORY loads context from PostgreSQL, SUPERVISOR generates a JSON plan using DeepSeek Cloud (5-7 steps), TOOLS execute system operations when needed, EXECUTOR generates real code using Qwen 3 GPU, REVIEWER evaluates results with DeepSeek, and MEMORY saves generated files to disk and persists everything back to PostgreSQL. The cycle repeats until all steps are complete.
+1. task_intake — receives the task
+2. deepseek_planner — DeepSeek generates a JSON plan with concrete steps
+3. qwen_worker — Qwen 3 14B GPU generates real Python code via Ollama
+4. validation — pytest runs on generated code
+5. supervisor_review — DeepSeek reviews results and errors
+6. loop_decision — completes or repeats up to 3 iterations
 
-## Nodes
+The output is returned directly to Claude Code as clean code without logs.
 
-### Supervisor (DeepSeek Cloud)
-- Role: Strategic planner and quality reviewer
-- Model: deepseek-chat via OpenAI-compatible API
-- Client: models/deepseek_client.py
-- System Prompt: Defined in config/models.yaml
-- Responsibilities: Analyzes user queries, generates structured JSON plans, assigns steps to roles (supervisor, executor, tools), reviews results, limits plans to 7 steps
-- Temperature: 0.1 for deterministic planning
-- JSON Mode: Enabled for structured outputs
+### Chat Mode (default)
+Any message not starting with "cowork:" is forwarded to DeepSeek Cloud through the proxy. The proxy translates between Anthropic format (Claude Code) and OpenAI format (DeepSeek). Responses maintain conversation memory across turns.
 
-### Executor (Qwen 3 14B - Local GPU)
-- Role: Technical executor and real code generator
-- Model: qwen3:14b via Ollama (Q4_K_M quantization, 9.3 GB)
-- Hardware: NVIDIA RTX 4060 Ti 16GB VRAM
-- Client: models/qwen_ollama_client.py
-- System Prompt: Defined in config/models.yaml
-- New in v2.0: Generates real code, shows reasoning process (Thinking...), creates complete projects with multiple files
-- Responsibilities: Analyzes code and architecture, generates code/diffs/patches, refactors modules, creates configurations and scripts
-- Temperature: 0.2 for precise code generation
-- Context Window: 4096 tokens
+## How Claude Code Connects to DeepSeek via Proxy
 
-### Reviewer (DeepSeek Cloud)
-- Role: Quality assurance
-- Model: deepseek-chat (same as Supervisor, different system prompt)
-- Responsibilities: Evaluates execution results against original query, returns structured JSON with status/feedback/corrections, triggers re-execution if needed, decides when a step is complete
+Claude Code communicates exclusively with the Anthropic API format. DeepSeek uses OpenAI-compatible format. The Flask proxy on port 8080 bridges them.
 
-### Tools Node
-- Role: System operations gateway
-- Implementation: graph/nodes/tools_node.py
-- Backend: 12 MCP (Model Context Protocol) servers
-- Unified Client: tools/mcp_client.py
-- Security: Whitelisted paths, whitelisted commands, read-only Git/Docker, Docker VM sandbox
+Configuration: activate-unificado.sh sets ANTHROPIC_BASE_URL=http://localhost:8080 redirecting Claude Code to the proxy. ANTHROPIC_AUTH_TOKEN holds the DeepSeek API key.
 
-### Memory Manager
-- Role: Persistence layer + file system writer
-- Implementation: graph/nodes/memory_manager.py
-- Backend: PostgreSQL with 7 tables
-- New in v2.0: Automatically saves generated code to disk with file type detection
-- Operations: Pre-run loads project memory and recent context, Post-run saves session/steps/artifacts/errors/tool usage + writes files to disk
+Translation flow: Claude Code sends Anthropic-format request to proxy. Proxy extracts messages, rebuilds into DeepSeek format (model, messages, temperature), forwards to api.deepseek.com/v1/chat/completions. DeepSeek responds with choices[0].message.content. Proxy wraps it into Anthropic format (id, type, role, content array, model, stop_reason). Claude Code displays it natively.
 
-## State: CoworkState
+## Autonomous Graph (graph.py)
 
-Defined in graph/state.py. Central data contract flowing through all LangGraph nodes.
+6 nodes with conditional routing:
 
-Fields:
-- session_id: UUID
-- user_query: str
-- project_path: str
-- max_iterations: int
-- iteration_count: int
-- plan: List of Step objects (each with id, description, status, assigned_to, step_type)
-- artifacts: List of Artifact objects (each with id, type, path, content)
-- current_step_id: UUID or None
-- errors: List of strings
-- metadata: Dict
+- task_intake: Receives and normalizes the task
+- deepseek_planner: Calls DeepSeek with system prompt "Eres arquitecto de software. Solo respondes JSON válido." Gets structured plan with steps
+- qwen_worker: Calls Ollama API (qwen3:14b) with the step description. Extracts both response and thinking fields. Saves generated code to output/
+- validation: Runs pytest on generated files
+- supervisor_review: DeepSeek evaluates results, returns JSON with complete: true/false
+- loop_decision: Returns END if complete or max iterations reached, otherwise loops back to planner
 
-Step statuses: pending -> in_progress -> done/failed
-Step assignments: supervisor, executor, tools
-Step types: analysis, code_generation, review, tool_call
-Artifact types: file_diff, analysis, plan, log, code, error, review, tool_call
+## Components
 
-## Graph Flow Details
+### Claude Code CLI
+Package: @anthropic-ai/claude-code v2.1.138. Location: claude-code/node_modules/. Communicates with proxy on localhost:8080.
 
-1. START enters at MEMORY (pre-run)
-2. MEMORY loads project_memory and recent sessions from PostgreSQL
-3. If first run, goes to SUPERVISOR. If session already saved, goes to END
-4. SUPERVISOR generates JSON plan with steps. If no pending steps, goes to MEMORY
-5. ROUTING checks assigned_to field: tools goes to TOOLS, executor goes to EXECUTOR
-6. TOOLS executes system operations via 12 MCP servers
-7. EXECUTOR generates real code via Qwen 3 GPU
-8. REVIEWER evaluates result. If needs correction, back to executor/tools. If done, continues
-9. If more steps pending, back to SUPERVISOR. If all done, goes to MEMORY (post-run)
-10. MEMORY saves generated files to disk and persists everything to PostgreSQL
-11. END delivers final result
+### Proxy (claude-code/proxy.py)
+Framework: Flask. Port: 8080. Dual mode: detects "cowork:" prefix to activate graph mode, otherwise forwards to DeepSeek for chat mode.
 
-## MCP Protocol
+### LangGraph (graph/graph.py)
+6 nodes as described above. Custom helpers: call_deepseek for DeepSeek API calls, call_qwen for Ollama API, execute_command for pytest validation.
 
-The Model Context Protocol (MCP) enables LLMs to interact with external tools through a standardized interface. Each server is independent with a call_tool(tool_name, arguments) function.
+### Loop Script (apps/cli/loop.sh)
+Bash wrapper that calls cowork_graph.py, cleans output, shows only generated code and iteration count.
 
-Unified client at tools/mcp_client.py provides synchronous and async access to all 12 servers.
+### execute_command.py (apps/cli/execute_command.py)
+Accepts stdin for multiline content. Actions: write-file (path + stdin content), run-command, list-files, git-status, run-tests.
 
-Available servers:
-- Filesystem: read_file, write_file, list_directory, search_files (path whitelist)
-- Shell: execute_command (command whitelist + blocklist)
-- Git: git_operation (read-only: status, diff, log, branch, show)
-- Docker: docker_operation (read-only: ps, logs, inspect, stats, version)
-- Browser: navigate, click, fill, screenshot, extract
-- WebSearch: search, news, fetch_page (DuckDuckGo)
-- Code Sandbox: execute_python, execute_shell, install_package (subprocess)
-- Docker Sandbox: execute_python, execute_shell (VM isolation, no network, read-only)
-- File Watcher: start_watching, stop_watching, get_changes, analyze_and_act
-- Gmail: send_email, read_emails
-- Google Drive: list_files, upload_file, download_file, share_file
-- Notion: create_page, search_pages
-- Skills: 20+ advanced tools (PDF, Excel, PPTX, Charts, Email, Web, GitHub, GitLab, Slack)
+### Qwen 3 14B on Ollama
+Model: qwen3:14b (Q4_K_M, 9.3 GB). Port: 11434. Generates code at ~32 tokens/s with visible reasoning. call_qwen extracts both response and thinking fields.
 
-## Docker Sandbox Security
+### DeepSeek Cloud
+Model: deepseek-chat. 128K context. JSON mode for planning. Temperature 0.1 for deterministic outputs. Approximately 0.50 USD/month.
 
-The Docker Sandbox provides VM-level isolation for code execution:
-- No network access (--network=none)
-- Read-only filesystem (--read-only)
-- Resource limits (--memory, --cpus, --pids-limit)
-- No privilege escalation (--security-opt=no-new-privileges, --cap-drop=ALL)
-- Automatic container cleanup (--rm)
-- SELinux compatible (:Z flag for Fedora)
-- Timeout protection
+### MCP Servers (12 Total)
+Filesystem, Shell, Git, Docker, Browser, WebSearch, Code Sandbox, Docker Sandbox, File Watcher, Gmail, Google Drive, Notion, Skills (20+).
 
-## Database Schema
-
-PostgreSQL provides persistent memory. Schema in infra/postgres_init.sql.
-
-7 tables: sessions, steps, artifacts, tool_usage, errors, project_memory, scheduled_tasks
-
-## Configuration
-
-Two YAML files with environment variable support (${VAR:-default}):
-
-config/settings.yaml: paths, database, providers, MCP servers, logging, security
-config/models.yaml: model definitions, system prompts, generation parameters
+### PostgreSQL (7 tables)
+sessions, steps, artifacts, tool_usage, errors, project_memory, scheduled_tasks.
 
 ## Security Model
 
-- API keys: Never hardcoded, always via os.getenv()
-- Filesystem MCP: Whitelisted paths only
-- Shell MCP: Whitelisted commands, destructive commands blocked
-- Git/Docker MCP: Read-only operations
-- Docker Sandbox: Full VM isolation
-- Prompt injection: Pattern-based detection and input sanitization
-- Database: No default passwords, POSTGRES_PASSWORD required
+API keys via .env (gitignored). Proxy localhost-only. Filesystem MCP whitelisted paths. Shell MCP whitelisted commands. Git/Docker MCP read-only. Docker Sandbox no network, read-only, resource limits.
 
-## Why Two Models?
+## Why This Architecture?
 
-DeepSeek Cloud (Supervisor/Reviewer): approximately 0.50 USD/month, 128K context, 0.1 temperature, strengths in reasoning and structure
-Qwen 3 14B Local (Executor): 0 USD (your GPU), 4K context, 0.2 temperature, strengths in code expertise and speed, visible reasoning
+DeepSeek Cloud (Brain): 0.50 USD/month, 128K context, excellent reasoning.
+Qwen 3 14B GPU (Worker): 0 USD, local code generation, 32 tokens/s.
+LangGraph (Orchestrator): 0 USD, 6 nodes, conditional routing.
+Claude Code CLI (Interface): 0 USD, unified with two modes.
 
-This hybrid approach maximizes quality while minimizing cost.
-
-## Extensibility
-
-Adding a new agent node:
-1. Create function in graph/nodes/
-2. Register in graph/graph.py
-3. Update routing logic
-4. Add Artifact types in state.py if needed
-
-Adding a new MCP server:
-1. Create tools/mcp/name/server.py
-2. Implement call_tool(tool_name, arguments)
-3. Register in tools/mcp_client.py
-4. Add security rules to config/settings.yaml
-
-Adding a new skill:
-1. Add tool definition to tools/mcp/skills/server.py
-2. Implement handler function
-3. Add package to requirements.txt
-4. Update documentation
+This split maximizes quality while minimizing cost. Cloud for strategy. Local for execution. Graph for automation. Single interface for simplicity.

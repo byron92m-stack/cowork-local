@@ -1,6 +1,6 @@
-# Contributing to Cowork-Local
+# Contributing to Cowork-Local v3.1 (Unified)
 
-Thanks for your interest in contributing to Cowork-Local.
+Thanks for your interest in contributing to Cowork-Local v3.1. This version unifies Claude Code CLI as the single interface with two modes: Cowork (autonomous graph) and Chat (DeepSeek conversation). DeepSeek Cloud is the brain, LangGraph orchestrates 6 nodes, Qwen 3 14B on Ollama GPU generates code, and 12 MCP Tools execute real operations.
 
 ## Development Environment Setup
 
@@ -12,62 +12,38 @@ pip install -r requirements.txt
 docker compose -f infra/docker-compose.yml up -d
 ollama pull qwen3:14b
 cp .env.example .env
+npm install --prefix claude-code
 ./cowork check
 
 ## Prerequisites
 
-- Python 3.12+ with venv
-- Docker and Docker Compose
-- Ollama installed and running
-- DeepSeek API key (platform.deepseek.com)
-- Git
+Python 3.12+ with venv. Node.js 22+ with npm. Docker and Docker Compose. Ollama installed and running with qwen3:14b. DeepSeek API key from platform.deepseek.com. Git.
 
 ## Project Statistics
 
-- 80 files total, 56 Python files, 4,781 lines of code
-- 12 MCP Servers (filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, filewatcher, gmail, googledrive, notion, skills)
-- 5 LangGraph nodes (supervisor, executor, reviewer, tools_node, memory_manager)
-- 7 PostgreSQL tables (sessions, steps, artifacts, tool_usage, errors, project_memory, scheduled_tasks)
-- 10 Git commits, clean history
+Claude Code CLI v2.1.138 with dual-mode unified interface. 6-node LangGraph (intake, planner, worker, validation, review, decision). 12 MCP Servers (filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, filewatcher, gmail, googledrive, notion, skills). 7 PostgreSQL tables. 20+ advanced skills. 4 layers: Interface (Claude Code), Brain (DeepSeek), Orchestrator (LangGraph), Executor (Qwen3 + MCP).
 
 ## Code Style
 
-- Follow PEP 8
-- Use 4 spaces for indentation
-- Max line length: 100 characters
-- Use black and isort for formatting
-- All public functions must have type hints
-- Google-style docstrings
+PEP 8 for Python. 4 spaces indentation. Max 100 chars per line. black and isort for formatting. Type hints on all public functions. Google-style docstrings.
 
 ## Architecture Guidelines
 
-### Adding a New Agent Node
-1. Create node function in graph/nodes/
-2. Import and register in graph/graph.py
-3. Update routing logic in conditional edges
-4. Add Artifact types in state.py if needed
+### Adding a New Graph Node
+Add function to graph/graph.py. Register with workflow.add_node(). Add routing logic in conditional edges. Update state.py if new fields needed.
 
 ### Adding a New MCP Server
-1. Create tools/mcp/name/ with __init__.py and server.py
-2. Implement call_tool(tool_name, arguments) function
-3. Register in tools/mcp_client.py in the server mapping
-4. Add security rules to config/settings.yaml
+Create tools/mcp/name/ with server.py. Implement call_tool function. Register in tools/mcp_client.py. Add security rules to config/settings.yaml.
 
 ### Adding a New Skill
-1. Add tool definition to tools/mcp/skills/server.py
-2. Implement handler function
-3. Add package to requirements.txt
-4. Update documentation
+Add tool definition to tools/mcp/skills/server.py. Implement handler. Add package to requirements.txt. Update docs.
+
+### Adding a New execute_command Action
+Add handler to apps/cli/execute_command.py. Available via "cowork execute" from CLI.
 
 ## Pull Request Process
 
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with clear commit messages
-4. Run tests and ensure nothing is broken
-5. Update documentation if needed
-6. Submit pull request with clear description
+Fork repo. Create feature branch. Make changes with clear commits. Run tests. Update documentation. Submit PR.
 
 ## Questions?
-
 Open an issue or start a discussion.

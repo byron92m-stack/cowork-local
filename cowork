@@ -19,3 +19,10 @@ if [ -f "$PROJECT_ROOT/.env" ]; then
 fi
 
 exec $VENV_PYTHON -m apps.cli.main "$@"
+
+# Comando execute (para Claude Code)
+if [ "$1" = "execute" ]; then
+    shift
+    python /media/SSD1T/cowork-local/apps/cli/execute_command.py "$@"
+    exit $?
+fi

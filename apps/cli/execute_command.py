@@ -1,4 +1,4 @@
-"""Ejecuta acciones de Claude Code via MCP Tools. Soporta stdin para contenido multilinea."""
+"""Ejecuta acciones via MCP Tools. Soporta stdin y argumentos directos."""
 import sys, json, asyncio, os
 
 sys.path.insert(0, "/media/SSD1T/cowork-local")
@@ -8,13 +8,28 @@ async def execute(action, *args):
     client = get_mcp_client()
     
     if action == "write-file":
-        # El path es el primer argumento. El contenido viene por stdin.
         path = args[0].strip().strip("'\"") if args else ""
-        content = sys.stdin.read()
+        content = sys.stdin.read() if not sys.stdin.isatty() else ""
+        if not content and len(args) > 1:
+            content = " ".join(args[1:]).strip()
+            if content.startswith("'") and content.endswith("'"): content = content[1:-1]
+            if content.startswith('"') and content.endswith('"'): content = content[1:-1]
+            content = content.replace('\\n', '\n').replace('\\t', '\t')
         if path and content:
             result = await client.call("filesystem", "write_file", {"path": path, "content": content})
-            return f"OK {path}: {result}"
-        return "Error: path o content vacios"
+            return f"OK {path}: {result} ({len(content)} chars)"
+        return f"Error: path='{path}' content={len(content)} chars"
+    
+    elif action == "write-json":
+        path = args[0].strip().strip("'\"") if args else ""
+        json_str = sys.stdin.read() if not sys.stdin.isatty() else " ".join(args[1:])
+        try:
+            data = json.loads(json_str)
+            content = data.get("content", "")
+            result = await client.call("filesystem", "write_file", {"path": path, "content": content})
+            return f"OK {path}: {result} ({len(content)} chars)"
+        except json.JSONDecodeError as e:
+            return f"Error JSON: {e}"
     
     elif action == "run-command":
         cmd = " ".join(args).strip().strip("'\"")
@@ -29,10 +44,7 @@ async def execute(action, *args):
     
     elif action == "run-tests":
         path = " ".join(args).strip().strip("'\"") or "/media/SSD1T/cowork-local"
-        result = await client.call("shell", "execute_command", {
-            "command": f"cd {path} && python -m pytest -v 2>&1 | tail -20"
-        })
-        return result
+        return await client.call("shell", "execute_command", {"command": f"cd {path} && python -m pytest -v 2>&1 | tail -20"})
     
     return f"OK: {action}"
 

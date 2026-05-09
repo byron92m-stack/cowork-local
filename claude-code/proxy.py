@@ -1,6 +1,6 @@
 """Proxy Unificado: cowork: = grafo, el resto = chat DeepSeek"""
 from flask import Flask, request, jsonify
-import httpx, json, uuid, subprocess, os
+import httpx, json, uuid, subprocess, os, os
 
 app = Flask(__name__)
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
@@ -30,8 +30,17 @@ def run_graph(query):
 def proxy():
     data = request.json
     messages = []
+    # Cargar CLAUDE.md del proyecto
+    claude_md = ""
+    claude_md_path = os.path.join(COWORK, "CLAUDE.md")
+    if os.path.exists(claude_md_path):
+        with open(claude_md_path) as f:
+            claude_md = f.read()
+    
     system = data.get('system', '')
-    if system:
+    if claude_md:
+        messages.append({"role": "system", "content": claude_md})
+    if system and system != claude_md:
         messages.append({"role": "system", "content": str(system)})
     
     user_input = ""

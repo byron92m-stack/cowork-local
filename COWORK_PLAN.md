@@ -47,6 +47,9 @@ README, ARCHITECTURE, CONTRIBUTING, SECURITY, COWORK_PLAN, MIT LICENSE.
 ### Phase 15: Claude Code CLI Integration (v3.0)
 Claude Code CLI v2.1.138 installed as unified interface. Proxy translates Anthropic-format calls to DeepSeek API. MCP HTTP Server on port 8765. execute_command.py bridges Claude Code to MCP Tools. auto-build.sh autonomous loop. Weather-cli project generated without supervision (12 files).
 
+### Phase 17: Enhanced Tools & Skills (v3.1.1)
+write-file with 3 modes (args, stdin, JSON). loop.sh with progress. search_tools.py (grep, find, modules). session_memory.py (PostgreSQL save/load). apply_diff.py (change, line, patch). CLAUDE.md auto-loaded by proxy. 3 new AI Skills: Test Generator, Code Review, Doc Generator via Qwen3 GPU.
+
 ### Phase 16: Unified Dual-Mode Interface (v3.1)
 Claude Code CLI now supports two modes in one interface. Cowork mode (prefix "cowork:") triggers autonomous graph: intake, DeepSeek planner, Qwen3 worker, validation, DeepSeek review, loop decision. Chat mode (default) forwards to DeepSeek Cloud for conversation. 6-node LangGraph with DeepSeek JSON planning and Qwen3 GPU code generation. loop.sh provides clean output for CLI. execute_command.py supports stdin for multiline code.
 

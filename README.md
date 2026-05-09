@@ -2,7 +2,7 @@
 
 ## Running Locally on Fedora 43
 
-Cowork-Local is a fully autonomous AI-powered development assistant that plans, executes, reviews, and remembers — all running on your own hardware. Version 3.1 unifies Claude Code CLI as the single interface with two modes: **Cowork mode** (autonomous graph execution) and **Chat mode** (conversational AI).
+Cowork-Local is a fully autonomous AI-powered development assistant that plans, executes, reviews, and remembers — all running on your own hardware. Version 3.1 unifies Claude Code CLI as the single interface with two modes: **Cowork mode** (autonomous graph execution) and **Code mode** (code generation).
 
 ## System Architecture (v3.1 — UNIFIED)
 
@@ -22,8 +22,8 @@ Activa el grafo autónomo completo. DeepSeek genera un plan JSON, Qwen3 escribe 
 Input: cowork: Crea una calculadora en Python
 Output: Código funcional generado y validado
 
-### Chat Mode (default)
-DeepSeek Cloud responde preguntas, explica conceptos, analiza código, sugiere mejoras. Conversación normal con memoria.
+### Code Mode (default)
+DeepSeek Cloud responde preguntas, explica conceptos, analiza código, sugiere mejoras. Generación de código con DeepSeek.
 
 Input: qué es LangGraph?
 Output: Explicación detallada con ejemplos
@@ -41,13 +41,13 @@ Máximo 3 iteraciones por defecto. Configurable con COWORK_MAX_ITER.
 
 ## Key Features
 
-- Unified Claude Code CLI with two modes: cowork + chat
+- Unified Claude Code CLI with two modes: cowork + code
 - Autonomous graph loop: plan → generate → validate → review → decide
 - DeepSeek Cloud Brain: 128K context, JSON planning, quality review
 - Qwen 3 14B on Ollama GPU: local code generation at 32 tokens/s
 - LangGraph Orchestrator: 6 nodes with conditional routing
 - 12 MCP Servers: Filesystem, Shell, Git, Docker, Browser, WebSearch, Code Sandbox, Docker Sandbox, File Watcher, Gmail, Google Drive, Notion, Skills
-- 20+ Advanced Skills: PDF, Excel, PowerPoint, Charts, Email, Web Search, GitHub, Slack, GitLab, Notion
+- 23+ Advanced Skills: PDF, Excel, PowerPoint, Charts, Email, Web Search, GitHub, Slack, GitLab, Notion, Test Generator (Qwen3), Code Review (Qwen3), Doc Generator (Qwen3)
 - PostgreSQL Memory: 7 tables for complete persistence
 - Multiple Interfaces: Claude Code CLI, cowork CLI, REST API, Streamlit Web UI, Swagger docs
 - Docker VM Sandbox: Secure isolated execution

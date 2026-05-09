@@ -66,7 +66,7 @@ Model: qwen3:14b (Q4_K_M, 9.3 GB). Port: 11434. Generates code at ~32 tokens/s w
 Model: deepseek-chat. 128K context. JSON mode for planning. Temperature 0.1 for deterministic outputs. Approximately 0.50 USD/month.
 
 ### MCP Servers (12 Total)
-Filesystem, Shell, Git, Docker, Browser, WebSearch, Code Sandbox, Docker Sandbox, File Watcher, Gmail, Google Drive, Notion, Skills (20+).
+Filesystem, Shell, Git, Docker, Browser, WebSearch, Code Sandbox, Docker Sandbox, File Watcher, Gmail, Google Drive, Notion, Skills (23+): PDF, Excel, PPTX, Charts, Email, Web, GitHub, GitLab, Slack, Notion, Test Generator, Code Review, Doc Generator.
 
 ### PostgreSQL (7 tables)
 sessions, steps, artifacts, tool_usage, errors, project_memory, scheduled_tasks.

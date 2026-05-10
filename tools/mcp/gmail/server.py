@@ -1,67 +1,65 @@
-"""Gmail MCP Server - Email sending and reading."""
-import os
-import logging
+"""Gmail MCP Server: Enviar y leer correos via Gmail API"""
+import os, asyncio
+from typing import Any
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
 
-logger = logging.getLogger(__name__)
+server = Server("cowork-gmail")
 
-async def call_tool(tool_name: str, arguments: Dict[str, Any]):
-    """Execute email operations via Gmail."""
+@server.list_tools()
+async def list_tools() -> list[Tool]:
+    return [
+        Tool(name="gmail_send", description="Envía un email via Gmail", inputSchema={"type":"object","properties":{"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}},"required":["to","subject","body"]}),
+        Tool(name="gmail_read", description="Lee los últimos emails del inbox", inputSchema={"type":"object","properties":{"max_results":{"type":"integer","default":5}},"required":[]}),
+        Tool(name="gmail_setup", description="Instrucciones para configurar Gmail bot", inputSchema={"type":"object","properties":{},"required":[]}),
+    ]
+
+@server.call_tool()
+async def call_tool(name: str, args: dict[str, Any]) -> list[TextContent]:
+    if name == "gmail_setup":
+        return [TextContent(type="text", text="📧 Configuración Gmail:\n1. Creá cowork.bot@gmail.com\n2. Activá 2FA en myaccount.google.com\n3. Generá App Password en https://myaccount.google.com/apppasswords\n4. Agregá al .env:\n   GMAIL_USER=cowork.bot@gmail.com\n   GMAIL_APP_PASSWORD=xxxx")]
     
-    if tool_name == "send_email":
-        to = arguments.get("to", "")
-        subject = arguments.get("subject", "")
-        body = arguments.get("body", "")
-        
+    elif name == "gmail_send":
+        user = os.getenv("GMAIL_USER","")
+        password = os.getenv("GMAIL_APP_PASSWORD","")
+        if not user or not password:
+            return [TextContent(type="text", text="⚠️ Configurá GMAIL_USER y GMAIL_APP_PASSWORD en .env")]
         try:
             import yagmail
-            user = os.getenv("GMAIL_USER")
-            password = os.getenv("GMAIL_APP_PASSWORD")
-            
-            if user and password:
-                yag = yagmail.SMTP(user, password)
-                yag.send(to=to, subject=subject, contents=body)
-                return [type('obj', (object,), {'text': f"Email sent to {to}"})()]
-            else:
-                return [type('obj', (object,), {'text': "Gmail not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD"})()]
-        except ImportError:
-            return [type('obj', (object,), {'text': "Install yagmail: pip install yagmail"})()]
+            yag = yagmail.SMTP(user, password)
+            yag.send(to=args.get("to"), subject=args.get("subject"), contents=args.get("body"))
+            return [TextContent(type="text", text=f"✅ Email enviado a {args.get('to')}")]
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error: {e}")]
     
-    elif tool_name == "read_emails":
-        limit = arguments.get("limit", 5)
+    elif name == "gmail_read":
+        user = os.getenv("GMAIL_USER","")
+        password = os.getenv("GMAIL_APP_PASSWORD","")
+        if not user or not password:
+            return [TextContent(type="text", text="⚠️ Configurá GMAIL_USER y GMAIL_APP_PASSWORD en .env")]
         try:
-            import imaplib
-            import email
-            from email.header import decode_header
-            
-            user = os.getenv("GMAIL_USER")
-            password = os.getenv("GMAIL_APP_PASSWORD")
-            
-            if not user or not password:
-                return [type('obj', (object,), {'text': "Gmail not configured"})()]
-            
+            import imaplib, email
             mail = imaplib.IMAP4_SSL("imap.gmail.com")
             mail.login(user, password)
             mail.select("inbox")
-            
-            _, messages = mail.search(None, "ALL")
-            ids = messages[0].split()[-limit:]
-            
-            emails = []
+            _, data = mail.search(None, "ALL")
+            ids = data[0].split()[-args.get("max_results",5):]
+            results = []
             for id in reversed(ids):
-                _, msg = mail.fetch(id, "(RFC822)")
-                email_body = msg[0][1]
-                message = email.message_from_bytes(email_body)
-                subject = decode_header(message["subject"])[0][0]
-                if isinstance(subject, bytes):
-                    subject = subject.decode()
-                emails.append(f"From: {message['from']}\nSubject: {subject}\n")
-            
+                _, msg_data = mail.fetch(id, "(RFC822)")
+                msg = email.message_from_bytes(msg_data[0][1])
+                results.append(f"📧 {msg['subject']} | De: {msg['from']}")
             mail.close()
             mail.logout()
-            
-            return [type('obj', (object,), {'text': '\n'.join(emails)})()]
-        except ImportError:
-            return [type('obj', (object,), {'text': "Email reading requires imaplib"})()]
+            return [TextContent(type="text", text="\n".join(results) if results else "Sin emails")]
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error: {e}")]
     
-    else:
-        return [type('obj', (object,), {'text': f"Unknown email tool: {tool_name}"})()]
+    return [TextContent(type="text", text=f"?: {name}")]
+
+async def main():
+    async with stdio_server() as (r, w):
+        await server.run(r, w, server.create_initialization_options())
+
+if __name__ == "__main__": asyncio.run(main())

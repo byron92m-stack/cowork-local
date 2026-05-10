@@ -31,6 +31,7 @@ DeepSeek generates code, explains, analyzes. Not conversational chat.
 ### Code Manipulation
 - python apps/cli/apply_diff.py change file "old" "new" → replace text
 - python apps/cli/apply_diff.py line file N "new" → replace line
+- python apps/cli/tool_caller.py → detecta y ejecuta tool calls (5 formatos)
 
 ### Memory
 - python apps/cli/session_memory.py save "query" → save session
@@ -45,3 +46,8 @@ DeepSeek generates code, explains, analyzes. Not conversational chat.
 - generate_pptx: Create PowerPoint presentations
 - generate_chart: Create charts (bar, line, pie)
 - web_search: Search the web via DuckDuckGo
+
+### Integrations
+- Gmail: Read emails (gmail_read), send emails (gmail_send)
+- Telegram: Send notifications (telegram_send), read messages (telegram_read)
+- File Watcher: Auto-detects changes and triggers graph (auto_watcher.py)

@@ -14,27 +14,24 @@ Cowork mode + Code mode. 6-node LangGraph. loop.sh. execute_command.py stdin sup
 - search_tools.py: grep, find, modules
 - session_memory.py: PostgreSQL save/load
 - apply_diff.py: change, line, patch
+- tool_caller.py: 5 format tool call detection (90% reliability)
 - CLAUDE.md: auto-loaded by proxy
 - 3 new AI Skills: Test Generator, Code Review, Doc Generator (Qwen3 GPU)
 - auto_watcher.py: file change detection → auto graph execution
+- Gmail integration: read/send emails via dedicated bot account
+- Telegram integration: send notifications, read messages via @byron92m_bot
 - All tools integrated into LangGraph nodes
-
-## Next Phase (planned)
-
-### Phase 18: Multi-Agent Swarm (v3.2)
-7 specialized agents (Receptionist, Finance, Scheduler, Marketing, Developer, Manager, Notifier) working in parallel with shared PostgreSQL memory.
-
-### Phase 19: External Integrations
-Gmail bot account + Telegram bot for notifications and remote control.
 
 ## Current Capabilities (v3.1.1)
 
 - Unified Claude Code CLI: cowork + code modes
 - 6-node LangGraph with integrated tools (search, diffs, memory, skills)
 - 23+ Skills (Qwen3 GPU)
+- Gmail + Telegram integration
 - File Watcher with auto-execution
+- Tool Caller with 5 format detection
 - 12 MCP Servers + PostgreSQL
-- Total cost: ~0.50 USD/month
+- Total cost: ~$0.50/month
 
 ## Architecture
 

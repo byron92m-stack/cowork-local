@@ -22,3 +22,4 @@ for i in $(seq 1 $MAX); do
 done
 
 echo "🏁 Fin (máx $MAX iteraciones)"
+# test watcher

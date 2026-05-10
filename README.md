@@ -1,10 +1,10 @@
-# Cowork-Local v3.1 — Unified Agentic Development Assistant
+# Cowork-Local v3.1.1 — Unified Agentic Development Assistant
 
 ## Running Locally on Fedora 43
 
-Cowork-Local is a fully autonomous AI-powered development assistant that plans, executes, reviews, and remembers — all running on your own hardware. Version 3.1 unifies Claude Code CLI as the single interface with two modes: **Cowork mode** (autonomous graph execution) and **Code mode** (code generation).
+Cowork-Local is a fully autonomous AI-powered development assistant that plans, executes, reviews, and remembers — all running on your own hardware. Version 3.1.1 unifies Claude Code CLI as the single interface with two modes: **Cowork mode** (autonomous graph execution) and **Code mode** (code generation).
 
-## System Architecture (v3.1 — UNIFIED)
+## System Architecture (v3.1.1 — UNIFIED)
 
 Five layers, one system:
 
@@ -98,13 +98,13 @@ Modo Chat:
 Terminal directo:
   ./apps/cli/loop.sh "Crea un conversor de monedas"
 
-## Key Achievements (v3.1)
+## Key Achievements (v3.1.1)
 
 - Unified Claude Code CLI with two integrated modes
 - Autonomous graph: DeepSeek plans, Qwen3 generates, system validates
 - 6-node LangGraph with loop decision
 - 12 MCP servers operational
-- 20+ advanced skills
+- 23+ advanced skills
 - PostgreSQL with 7 tables
 - Docker VM sandbox
 - File watcher with auto-execution

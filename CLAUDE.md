@@ -1,4 +1,4 @@
-# CLAUDE.md — Cowork-Local v3.1
+# CLAUDE.md — Cowork-Local v3.1.1
 
 ## Operation Modes
 

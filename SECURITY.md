@@ -22,20 +22,20 @@ Pattern-based detection of injection attempts. Input sanitization (control chara
 All write operations require explicit user confirmation by default. Enable sandbox_mode to disable all write operations entirely.
 
 ### Database
-Credentials stored in environment variables only. No default passwords, POSTGRES_PASSWORD is required. Connection parameters from env vars, not config files. 7 tables with UUID primary keys and audit timestamps.
+Credentials stored in environment variables only. No default passwords. Connection parameters from env vars, not config files. 7 tables with UUID primary keys and audit timestamps.
 
 ### File Watcher Security
 Monitors only specified directories. Filters by file extension patterns. Ignores temp files (__pycache__, venv, .git). Auto-execution disabled by default.
 
-### Proxy Security (v3.1)
-Proxy runs on localhost:8080 only. API key passed via environment variable. No external network access required beyond api.deepseek.com. Cowork mode executes graph via subprocess with timeout protection. Chat mode forwards to DeepSeek with translated format. Tool calls executed with timeout limits.
+### Proxy Security (v3.1.1)
+Proxy runs on localhost:8080 only. API key via environment variable. No external network access beyond api.deepseek.com. Cowork mode executes graph via subprocess with timeout. CLAUDE.md auto-loaded as system prompt.
 
-### Graph Security (v3.1)
-LangGraph loop limited to 3 iterations by default. DeepSeek planner uses JSON mode for structured outputs. Qwen3 worker runs locally on GPU, no external calls. Validation runs pytest in subprocess with timeouts.
+### Graph Security (v3.1.1)
+LangGraph loop limited to 3 iterations. DeepSeek planner uses JSON mode. Qwen3 worker runs locally on GPU, no external calls. Validation runs pytest in subprocess. Tools integrated with timeout protection.
 
 ## Audit Results (May 2026)
 
-Zero API keys in committed code. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in .env (excluded from Git). Project unified into single folder structure. No orphan or legacy files on SSD1T.
+Zero API keys in committed code. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in .env (excluded from Git). Project unified into single folder structure. No orphan or legacy files.
 
 ## Best Practices for Users
 
@@ -49,4 +49,4 @@ Zero API keys in committed code. Zero personal emails exposed. Zero local IPs ex
 
 ## Supported Versions
 
-Latest version only is supported (v3.1 Unified).
+Latest version only is supported (v3.1.1 Unified).

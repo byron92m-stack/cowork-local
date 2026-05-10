@@ -35,3 +35,4 @@ if __name__ == "__main__":
             print(f"\n📁 {a.path}:")
             with open(a.path) as f:
                 print(f.read()[:500])
+# test watcher

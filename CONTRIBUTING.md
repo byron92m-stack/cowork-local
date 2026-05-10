@@ -1,6 +1,6 @@
-# Contributing to Cowork-Local v3.1 (Unified)
+# Contributing to Cowork-Local v3.1.1 (Unified)
 
-Thanks for your interest in contributing to Cowork-Local v3.1. This version unifies Claude Code CLI as the single interface with two modes: Cowork (autonomous graph) and Chat (DeepSeek conversation). DeepSeek Cloud is the brain, LangGraph orchestrates 6 nodes, Qwen 3 14B on Ollama GPU generates code, and 12 MCP Tools execute real operations.
+Thanks for your interest in contributing to Cowork-Local v3.1.1. This version unifies Claude Code CLI as the single interface with two modes: Cowork (autonomous graph) and Code (generation). DeepSeek Cloud is the brain, LangGraph orchestrates 6 nodes with integrated tools, Qwen 3 14B on Ollama GPU is the executor, and 12 MCP Tools execute real operations.
 
 ## Development Environment Setup
 
@@ -21,7 +21,7 @@ Python 3.12+ with venv. Node.js 22+ with npm. Docker and Docker Compose. Ollama 
 
 ## Project Statistics
 
-Claude Code CLI v2.1.138 with dual-mode unified interface. 6-node LangGraph (intake, planner, worker, validation, review, decision). 12 MCP Servers (filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, filewatcher, gmail, googledrive, notion, skills). 7 PostgreSQL tables. 20+ advanced skills. 4 layers: Interface (Claude Code), Brain (DeepSeek), Orchestrator (LangGraph), Executor (Qwen3 + MCP).
+Claude Code CLI v2.1.138 with dual-mode unified interface. 6-node LangGraph (intake, planner, worker, validation, review, decision) with integrated tools (search, diffs, memory, skills). 12 MCP Servers. 7 PostgreSQL tables. 23+ advanced skills. Architecture: 1 Brain (DeepSeek) + 1 Executor (Qwen3) + 12 MCP Servers.
 
 ## Code Style
 
@@ -38,8 +38,8 @@ Create tools/mcp/name/ with server.py. Implement call_tool function. Register in
 ### Adding a New Skill
 Add tool definition to tools/mcp/skills/server.py. Implement handler. Add package to requirements.txt. Update docs.
 
-### Adding a New execute_command Action
-Add handler to apps/cli/execute_command.py. Available via "cowork execute" from CLI.
+### Adding a New CLI Tool
+Create script in apps/cli/. Integrate into LangGraph node if needed. Update CLAUDE.md with usage. Update documentation.
 
 ## Pull Request Process
 

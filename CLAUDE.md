@@ -31,7 +31,7 @@ DeepSeek generates code, explains, analyzes. Not conversational chat.
 ### Code Manipulation
 - python apps/cli/apply_diff.py change file "old" "new" → replace text
 - python apps/cli/apply_diff.py line file N "new" → replace line
-- python apps/cli/tool_caller.py → detecta y ejecuta tool calls (5 formatos)
+- python apps/cli/tool_caller.py → detects and executes tool calls (5 formats, 90% reliability)
 
 ### Memory
 - python apps/cli/session_memory.py save "query" → save session
@@ -50,4 +50,8 @@ DeepSeek generates code, explains, analyzes. Not conversational chat.
 ### Integrations
 - Gmail: Read emails (gmail_read), send emails (gmail_send)
 - Telegram: Send notifications (telegram_send), read messages (telegram_read)
+- Google Calendar: Create events via email invitations (calendar_add)
 - File Watcher: Auto-detects changes and triggers graph (auto_watcher.py)
+
+## Testing
+- pytest tests/ -v → run all tests (5/5 passing)

@@ -9,7 +9,12 @@ async def execute(action, *args):
     
     if action == "write-file":
         path = args[0].strip().strip("'\"") if args else ""
-        content = sys.stdin.read() if not sys.stdin.isatty() else ""
+        content = ""
+        if not sys.stdin.isatty():
+            try:
+                content = sys.stdin.read()
+            except:
+                pass
         if not content and len(args) > 1:
             content = " ".join(args[1:]).strip()
             if content.startswith("'") and content.endswith("'"): content = content[1:-1]

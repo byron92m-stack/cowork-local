@@ -1,10 +1,11 @@
 """Proxy Unificado: cowork: = grafo, el resto = chat DeepSeek"""
+import os
 from flask import Flask, request, jsonify
 import httpx, json, uuid, subprocess, os, os
 
 app = Flask(__name__)
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
-API_KEY = "sk-122139651350414899e1617d190c94f3"
+API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 COWORK = "/media/SSD1T/cowork-local"
 
 def run_graph(query):

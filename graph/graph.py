@@ -7,7 +7,7 @@ from .state import CoworkState
 logger = logging.getLogger(__name__)
 
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
-DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-122139651350414899e1617d190c94f3")
+DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 OLLAMA_URL = "http://localhost:11434/api/generate"
 COWORK_DIR = "/media/SSD1T/cowork-local"
 

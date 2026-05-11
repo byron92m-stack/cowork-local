@@ -33,3 +33,4 @@ output/
 cowork-vscode/
 node_modules/
 cowork-vscode/
+credentials.json

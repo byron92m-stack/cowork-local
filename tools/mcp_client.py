@@ -36,6 +36,8 @@ class MCPClient:
             from tools.mcp.skills.server import call_tool
         elif server == "telegram":
             from tools.mcp.telegram.server import call_tool
+        elif server == "calendar":
+            from tools.mcp.calendar.server import call_tool
         else:
             return f"Error: Servidor no encontrado: {server}. Disponibles: filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, gmail, googledrive, notion, skills"
         

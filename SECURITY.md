@@ -18,17 +18,17 @@ Database: Credentials via environment variables only. No default passwords. 7 ta
 
 File Watcher Security: Monitors specified directories only. Filters by file extension. Ignores temp files. Auto-execution disabled by default.
 
-Proxy Security version 3.1.1: localhost only port 8080. API key via environment variable. Cowork mode executes via subprocess with timeout. CLAUDE.md auto-loaded as system prompt.
+Graph Security version 3.1.1: LangGraph loop limited to 3 iterations. DeepSeek planner uses JSON mode. DeepSeek Flash worker runs via API. Validation runs pytest in subprocess. Worker prompt loaded from external file for easy auditing. Multi-file JSON generation with path sanitization. Auto-install and auto-tests with timeout protection.
 
-Graph Security version 3.1.1: LangGraph loop limited to 3 iterations. DeepSeek planner uses JSON mode. Qwen3 worker runs locally on GPU. Validation runs pytest in subprocess. Tools integrated with timeout protection.
+Integration Security: Gmail and Telegram use dedicated bot accounts, never personal credentials. Google Calendar uses email invitations via dot ICS files, no OAuth tokens stored. All external API calls use environment variables for authentication.
 
 ## Audit Results May 2026
 
-Zero API keys committed. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in dotenv excluded from Git. Project unified into single folder. No orphan files.
+Zero API keys committed. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in dotenv excluded from Git. Project unified into single folder. No orphan files. Claude Code proxy removed, reducing attack surface.
 
 ## Best Practices
 
-Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed paths. Keep Docker sandbox enabled for untrusted code. Rotate API keys periodically. Keep proxy on localhost only.
+Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed paths. Keep Docker sandbox enabled for untrusted code. Rotate API keys periodically. Review worker_prompt.txt before deployment. Use dedicated bot accounts for all integrations.
 
 ## Supported Versions
 

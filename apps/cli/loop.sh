@@ -1,25 +1,31 @@
 #!/bin/bash
 QUERY="$*"
-MAX="${COWORK_MAX_ITER:-3}"
 OUTPUT_DIR="/media/SSD1T/cowork-local/output"
 
 echo "🚀 $QUERY"
 
-for i in $(seq 1 $MAX); do
-    python /media/SSD1T/cowork-local/apps/cli/cowork_graph.py "$QUERY" 2>/dev/null > /tmp/cowork_output.txt
-    
-    # Buscar el archivo más reciente en output/
-    ARCHIVO=$(ls -t "$OUTPUT_DIR"/gen_*.py 2>/dev/null | head -1)
-    
-    if [ -f "$ARCHIVO" ] && [ -s "$ARCHIVO" ]; then
-        echo "✅ Generado ($(wc -c < "$ARCHIVO") chars)"
-        echo ""
-        cat "$ARCHIVO"
-        echo ""
-        echo "🏁 Fin"
-        exit 0
-    fi
-done
+# Ejecutar grafo y capturar output
+python /media/SSD1T/cowork-local/apps/cli/cowork_graph.py "$QUERY" 2>/dev/null > /tmp/cowork_output.txt
 
-echo "🏁 Fin (máx $MAX iteraciones)"
-# test watcher
+# Buscar archivos creados recientemente
+ARCHIVOS=$(find "$OUTPUT_DIR" -type f -name "*.py" -mmin -2 | head -5)
+
+if [ -n "$ARCHIVOS" ]; then
+    echo "✅ Archivos creados:"
+    echo "$ARCHIVOS" | while read f; do
+        echo "   📁 $f ($(wc -c < "$f") bytes)"
+    done
+    
+    # Mostrar el primer archivo .py
+    PRIMERO=$(echo "$ARCHIVOS" | head -1)
+    if [ -f "$PRIMERO" ]; then
+        echo ""
+        cat "$PRIMERO"
+    fi
+else
+    # Fallback: mostrar output del grafo
+    grep "WORKER\|archivos\|Tests" /tmp/cowork_output.txt
+fi
+
+echo ""
+echo "🏁 Fin"

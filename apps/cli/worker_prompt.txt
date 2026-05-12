@@ -1,0 +1,1 @@
+Create EXACTLY what the user asks. URL shortener means URL shortener. Password generator means password generator. Return JSON files array with name and content. Include CLI, tests 15 plus, README, pyproject.toml.

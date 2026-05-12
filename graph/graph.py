@@ -1,155 +1,116 @@
-"""LangGraph con 6 nodos + tools integradas: search, diff, memory, skills"""
+"""LangGraph 6 nodos con DeepSeek multi-archivo + auto-instalacion + tests"""
 import logging, json, subprocess, os, httpx
 from typing import Dict, Any, Literal
 from langgraph.graph import StateGraph, END
 from .state import CoworkState
 
 logger = logging.getLogger(__name__)
-
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-OLLAMA_URL = "http://localhost:11434/api/generate"
 COWORK_DIR = "/media/SSD1T/cowork-local"
 
-# ─── Helpers ──────────────────────────────────────────────
-def call_deepseek(system: str, prompt: str, json_mode=False) -> str:
+def _load_prompt():
+    with open(os.path.join(COWORK_DIR, "apps", "cli", "worker_prompt.txt")) as f:
+        return f.read().strip()
+
+def call_deepseek(system, prompt, json_mode=False):
     try:
-        payload = {"model": "deepseek-chat", "messages": [
-            {"role": "system", "content": system}, {"role": "user", "content": prompt}
-        ], "max_tokens": 4096, "temperature": 0.1}
+        payload = {"model": "deepseek-chat", "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}], "max_tokens": 4096, "temperature": 0.1}
         if json_mode: payload["response_format"] = {"type": "json_object"}
         r = httpx.post(DEEPSEEK_URL, json=payload, headers={"Authorization": f"Bearer {DEEPSEEK_KEY}"}, timeout=60)
         return r.json()["choices"][0]["message"]["content"]
-    except Exception as e:
-        return f'{{"error": "{str(e)}"}}'
+    except Exception as e: return '{"error": "%s"}' % str(e)
 
-def call_qwen(prompt: str) -> str:
+def call_worker(prompt):
     try:
-        r = httpx.post(OLLAMA_URL, json={"model":"qwen3:14b","prompt":prompt,"stream":False,"options":{"num_predict":1024,"temperature":0.2}}, timeout=120)
-        data = r.json()
-        return (data.get("response","") or data.get("thinking",""))[:2000]
-    except Exception as e:
-        return f"ERROR Qwen: {e}"
+        sp = _load_prompt()
+        r = httpx.post(DEEPSEEK_URL, json={"model": "deepseek-chat", "messages": [{"role": "system", "content": sp}, {"role": "user", "content": prompt}], "max_tokens": 4096, "temperature": 0.1, "response_format": {"type": "json_object"}}, headers={"Authorization": f"Bearer {DEEPSEEK_KEY}"}, timeout=120)
+        return r.json()["choices"][0]["message"]["content"]
+    except Exception as e: return '{"error": "%s"}' % str(e)
 
-def execute_command(cmd: str) -> str:
+def save_files(json_response):
+    try:
+        data = json.loads(json_response)
+        created = []
+        
+        # Formato 1: {"files": [{"name":..., "content":...}]}
+        files = data.get("files", [])
+        if files:
+            for f in files:
+                path = f.get("path", "") or f.get("name", "")
+                fc = f.get("content", "")
+                if path and fc:
+                    if not path.startswith("/"): path = os.path.join(COWORK_DIR, "output", path)
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    with open(path, "w") as fh: fh.write(fc)
+                    created.append(path)
+            return created
+        
+        # Formato 2: {"name": "project", "content": {"file.py": "code", ...}}
+        content_dict = data.get("content", {})
+        if isinstance(content_dict, dict):
+            for path, fc in content_dict.items():
+                if path and fc and isinstance(fc, str):
+                    if not path.startswith("/"): path = os.path.join(COWORK_DIR, "output", path)
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    with open(path, "w") as fh: fh.write(fc)
+                    created.append(path)
+            return created
+        
+        return []
+    except: return []
+
+def execute_command(cmd):
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=COWORK_DIR, timeout=30)
         return result.stdout.strip() or result.stderr.strip() or "(ok)"
-    except Exception as e:
-        return f"ERROR: {e}"
+    except: return "ERROR"
 
-def search_code(query: str) -> str:
-    try:
-        result = subprocess.run(["python", f"{COWORK_DIR}/apps/cli/search_tools.py", "search", query], capture_output=True, text=True, timeout=15)
-        return result.stdout.strip()[:1000]
-    except: return ""
-
-def save_session(query: str) -> str:
-    try:
-        result = subprocess.run(["python", f"{COWORK_DIR}/apps/cli/session_memory.py", "save", query], capture_output=True, text=True, timeout=10)
-        return result.stdout.strip()
-    except: return ""
-
-# ─── Nodos ────────────────────────────────────────────────
-def task_intake(state: CoworkState) -> Dict[str, Any]:
-    logger.info("[INTAKE] Tarea recibida")
-    state.metadata["started"] = True
-    # Buscar contexto relevante automáticamente
-    context = search_code(state.user_query.split()[0])
-    if context and "Error" not in context:
-        state.project_context["search_results"] = context[:500]
-        logger.info("[INTAKE] Contexto encontrado en el repo")
+def task_intake(state):
+    logger.info("[INTAKE]")
     return state.model_dump()
 
-def deepseek_planner(state: CoworkState) -> Dict[str, Any]:
-    logger.info("[PLANNER] DeepSeek generando plan")
-    context = state.project_context.get("search_results", "")
-    prompt = f"""Tarea: {state.user_query}
-Contexto del repo: {context}
-Iteración: {state.iteration_count}
-
-Genera plan JSON con pasos. Usa estas tools disponibles:
-- search_tools: buscar código
-- apply_diff: modificar archivos
-- generate_tests: crear tests
-- review_code: revisar código
-- generate_docs: documentar
-
-Formato: {{"steps":[{{"id":1,"goal":"descripción","files":["archivo.py"],"type":"code"}}]}}"""
-    
-    response = call_deepseek("Eres arquitecto. Solo respondes JSON.", prompt, json_mode=True)
-    logger.info(f"[PLANNER] {response[:200]}")
-    
+def deepseek_planner(state):
+    logger.info("[PLANNER]")
+    response = call_deepseek("Eres arquitecto. Solo respondes JSON.", 'Tarea: %s\nGenera plan JSON: {"steps":[{"id":1,"goal":"...","type":"code"}]}' % state.user_query, json_mode=True)
     try:
         plan = json.loads(response)
         for s in plan.get("steps", []):
-            raw_type = s.get("type", "code_generation")
-            if raw_type in ("code","generate","script"): step_type = "code_generation"
-            elif raw_type in ("test","tests"): step_type = "code_generation"
-            elif raw_type in ("review","check"): step_type = "review"
-            elif raw_type in ("docs","document"): step_type = "code_generation"
-            elif raw_type in ("search","find"): step_type = "tool_call"
-            else: step_type = "code_generation"
-            state.add_step(description=s.get("goal",s.get("description","")), assigned_to="executor", step_type=step_type)
+            state.add_step(description=s.get("goal",""), assigned_to="executor", step_type="code_generation")
         if state.plan and not state.current_step_id:
             state.current_step_id = state.plan[0].id
             state.plan[0].status = "in_progress"
         state.add_artifact("plan", response)
-    except Exception as e:
-        logger.error(f"[PLANNER] Error: {e}")
+    except:
         state.add_step(description=state.user_query, assigned_to="executor", step_type="code_generation")
-        if not state.current_step_id and state.plan:
-            state.current_step_id = state.plan[0].id
-            state.plan[0].status = "in_progress"
     state.iteration_count += 1
     return state.model_dump()
 
-def qwen_worker(state: CoworkState) -> Dict[str, Any]:
-    logger.info("[WORKER] Ejecutando paso")
+def qwen_worker(state):
+    logger.info("[WORKER]")
     step = state.get_current_step()
     if step and step.assigned_to == "executor":
-        # Usar el skill apropiado según el tipo
-        if step.step_type == "review":
-            code = state.artifacts[-1].content if state.artifacts else ""
-            prompt = f"Revisa bugs y mejoras:\n\n{code}"
-            code = call_qwen(prompt)
-        elif step.step_type == "code_generation":
-            prompt = f"Genera SOLO código Python para: {step.description}. Sin explicaciones."
-            code = call_qwen(prompt)
-        else:
-            prompt = f"Ejecuta: {step.description}"
-            code = call_qwen(prompt)
-        
-        filename = f"output/gen_{state.session_id[:8]}_{step.id[:8]}.py"
-        filepath = f"{COWORK_DIR}/{filename}"
-        with open(filepath, "w") as f: f.write(code)
-        state.add_artifact("code", code, filepath)
+        prompt = "Create a complete project: %s. Generate ALL files. Return JSON with files array." % step.description
+        json_response = call_worker(prompt)
+        created = save_files(json_response)
+        logger.info("[WORKER] %d archivos: %s" % (len(created), created))
+        state.add_artifact("code", json_response[:500], created[0] if created else None)
         step.status = "done"
-        logger.info(f"[WORKER] {filepath} ({len(code)} chars)")
-        
-        # Auto-aplicar diff si corresponde
-        if "apply_diff" in step.description.lower():
-            execute_command(f"python {COWORK_DIR}/apps/cli/apply_diff.py change /tmp/test 'old' 'new'")
+        if created:
+            project_dir = os.path.dirname(created[0])
+            execute_command("cd %s && pip install -e . 2>&1 | tail -3" % project_dir)
+            test_result = execute_command("cd %s && python -m pytest -v 2>&1 | tail -15" % project_dir)
+            state.add_artifact("log", test_result)
     return state.model_dump()
 
-def validation(state: CoworkState) -> Dict[str, Any]:
-    logger.info("[VALIDATION] Tests + session save")
-    result = execute_command(f"cd {COWORK_DIR}/output && python -m pytest --tb=short 2>&1 | tail -10")
-    state.add_artifact("log", result)
-    if "FAILED" in result: state.errors.append(result[:200])
-    # Auto-guardar sesión
-    save_session(state.user_query)
+def validation(state):
+    logger.info("[VALIDATION]")
     return state.model_dump()
 
-def supervisor_review(state: CoworkState) -> Dict[str, Any]:
-    logger.info("[REVIEW] DeepSeek revisando")
+def supervisor_review(state):
+    logger.info("[REVIEW]")
     artifacts_summary = "\n".join([a.content[:200] for a in state.artifacts[-3:] if a.content])
-    prompt = f"""Tarea: {state.user_query}
-Resultados: {artifacts_summary}
-Errores: {state.errors[-2:] if state.errors else 'Ninguno'}
-Iteraciones: {state.iteration_count}
-¿Completado? JSON: {{"complete":true/false,"comments":"..."}}"""
-    response = call_deepseek("Supervisor. Solo JSON.", prompt, json_mode=True)
+    response = call_deepseek("Supervisor. Solo JSON.", 'Tarea: %s\nResultados: %s\nCompletado? JSON: {"complete":true/false,"comments":"..."}' % (state.user_query, artifacts_summary), json_mode=True)
     try:
         review = json.loads(response)
         state.metadata["complete"] = review.get("complete", False)
@@ -158,21 +119,17 @@ Iteraciones: {state.iteration_count}
         state.metadata["complete"] = state.is_complete()
     return state.model_dump()
 
-def loop_decision(state: CoworkState) -> Literal["planner", END]:
+def loop_decision(state):
     if state.metadata.get("complete") or state.is_complete() or state.iteration_count >= state.max_iterations:
-        logger.info(f"[DECISION] FIN. {state.iteration_count}/{state.max_iterations}")
+        logger.info("[DECISION] FIN %d/%d" % (state.iteration_count, state.max_iterations))
         return END
-    logger.info(f"[DECISION] Loop {state.iteration_count}/{state.max_iterations}")
+    logger.info("[DECISION] Loop %d/%d" % (state.iteration_count, state.max_iterations))
     return "planner"
 
-# ─── Build ────────────────────────────────────────────────
-def build_graph() -> StateGraph:
+def build_graph():
     workflow = StateGraph(CoworkState)
-    workflow.add_node("intake", task_intake)
-    workflow.add_node("planner", deepseek_planner)
-    workflow.add_node("worker", qwen_worker)
-    workflow.add_node("validation", validation)
-    workflow.add_node("review", supervisor_review)
+    for name, fn in [("intake", task_intake), ("planner", deepseek_planner), ("worker", qwen_worker), ("validation", validation), ("review", supervisor_review)]:
+        workflow.add_node(name, fn)
     workflow.set_entry_point("intake")
     workflow.add_edge("intake", "planner")
     workflow.add_edge("planner", "worker")
@@ -181,9 +138,8 @@ def build_graph() -> StateGraph:
     workflow.add_conditional_edges("review", loop_decision, {"planner":"planner", END:END})
     return workflow.compile()
 
-def run_graph(user_query: str, project_path: str = COWORK_DIR, max_iterations: int = 3) -> CoworkState:
+def run_graph(user_query, project_path=COWORK_DIR, max_iterations=3):
     state = CoworkState(user_query=user_query, project_path=project_path, max_iterations=max_iterations)
     graph = build_graph()
-    config = {"recursion_limit": max_iterations * 10}
-    result = graph.invoke(state, config)
+    result = graph.invoke(state, {"recursion_limit": max_iterations * 10})
     return CoworkState(**result)

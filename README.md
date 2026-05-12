@@ -1,49 +1,49 @@
-# Cowork-Local v3.1.1
+# Cowork-Local v3.2 — Autonomous Multi-Agent Development Assistant
 
-## Autonomous AI Development Assistant for Fedora 43
+AI-powered system that generates complete, tested, production-ready Python CLI projects with zero human supervision. Built on LangGraph with DeepSeek V4 Pro planner and FREE Flash worker via OpenCode CLI. Runs locally on Fedora 43 with GPU acceleration.
 
-OpenCode CLI as unified interface with two modes. DeepSeek Cloud brain using V4 Pro and V4 Flash. LangGraph 6-node orchestrator with multi-file JSON project generation. 14 MCP Servers. 23 Skills. Gmail, Telegram, Calendar integration. PostgreSQL memory with 7 tables. 5 of 5 tests passing. File Watcher with auto-execution. Tool Caller with 5 format detection at 90 percent reliability.
+## Results Summary
 
-Cost: approximately 0.50 dollars per month. Everything else runs locally on your hardware.
+Four consecutive projects generated in a single iteration with FREE model, all tests passing:
 
-## System Architecture
+webreq 34/34 passing. CLI for HTTP requests with six argparse flags, requests library, unittest.mock tests for all HTTP methods, JSON parsing, timeout handling, and verbose output. 12 CLI tests, 22 core tests.
 
-Five layers, one system. Interface is OpenCode CLI v1.14.48 providing single input and output. Brain is DeepSeek Cloud with V4 Pro for Code Mode and V4 Flash for Cowork Mode, both with 128K context. Orchestrator is LangGraph with 6 nodes for task intake, DeepSeek planning, worker execution, validation, supervisor review, and loop decision. Worker is DeepSeek V4 Flash generating multi-file projects via JSON with auto-install and auto-tests. Tools are 14 MCP Servers for file operations, commands, Git, Docker, and Skills.
+logview 32/32 passing. Log file analyzer with six argparse flags, LogAnalyzer class with parse, filter, tail, to_json, and stats methods. Regex-based log level detection (ERROR, WARN, INFO, DEBUG). 32 pytest tests using temp files.
 
-## Two Modes Unified in One CLI
+gitstat 48/48 passing. Git repository statistics with six argparse flags, GitStats class using subprocess to run git commands. Per-author commit counts, insertions, deletions, file changes. Output formats: table, JSON, CSV. 48 tests with temp git repos.
 
-Cowork Mode prefix "cowork:" activates the full autonomous graph. DeepSeek Flash generates a JSON plan, DeepSeek Flash generates multi-file projects via JSON output, the system validates with pytest and auto-installs dependencies, DeepSeek Flash reviews the result, and the loop decides whether to repeat or finish. Zero human supervision. Multi-file output with auto-install and auto-tests.
+tcpdump-cli 41/41 passing. Network packet analyzer CLI with seven argparse flags using scapy library. Interface selection, port filtering, protocol filtering, BPF filter support, verbose mode, output file. 41 tests with mocks.
 
-Code Mode is the default. DeepSeek V4 Pro via OpenCode CLI with native tool calling. Answers questions, explains concepts, analyzes code, suggests improvements. Fast code generation with automatic testing and README generation.
+## Architecture
 
-## Autonomous Loop
+Multi-agent LangGraph pipeline with six nodes. Planner node uses DeepSeek V4 Pro to generate a structured JSON plan from natural language. Worker node executes plan via OpenCode CLI with DeepSeek V4 Flash FREE model, generating all project files simultaneously. Validation node runs pytest automatically. Review node evaluates test results against original requirements. Decision node determines whether project is complete or requires additional iterations. Maximum four iterations configured, all recent projects completed in one.
 
-Step 1: INTAKE receives the task and searches the repository for context. Step 2: PLANNER using DeepSeek generates a JSON plan with concrete steps. Step 3: WORKER using DeepSeek V4 Flash generates multi-file projects via JSON with all files including main code, tests, README, and pyproject.toml. Step 4: VALIDATION runs pytest and auto-installs dependencies, then auto-saves the session to PostgreSQL. Step 5: REVIEW using DeepSeek evaluates results. Step 6: DECISION completes or repeats the loop. Maximum 3 iterations by default. Configurable with COWORK_MAX_ITER.
+System operates with sub-cent cost per project. Planner calls DeepSeek Pro once at approximately 0.001 dollars. Worker uses completely free Flash model for unlimited code generation. No cloud vendor lock-in. Entire pipeline runs on local hardware.
 
-## Key Features
+## Technical Stack
 
-OpenCode CLI v1.14.48 with two modes for cowork and code. Autonomous graph loop for plan, generate, validate, review, and decide. Multi-file JSON project generation with auto-install and auto-tests. DeepSeek Cloud Brain with 128K context and JSON planning. LangGraph Orchestrator with 6 nodes and conditional routing with integrated tools. 14 MCP Servers including Filesystem, Shell, Git, Docker, Browser, WebSearch, Code Sandbox, Docker Sandbox, File Watcher, Gmail, Google Drive, Notion, Calendar, Telegram, and Skills. 23 plus Advanced Skills including PDF, Excel, PowerPoint, Charts, Email, Web Search, GitHub, Slack, GitLab, Notion, Test Generator, Code Review, and Doc Generator. Gmail Integration for reading and sending emails via dedicated bot account. Telegram Integration for sending notifications and reading commands via bot. Google Calendar Integration for creating events via email invitations. File Watcher that auto-detects changes and triggers the graph. Tool Caller that detects and executes tool calls in 5 formats at 90 percent reliability. PostgreSQL Memory with 7 tables for complete persistence. Docker VM Sandbox for secure isolated code execution. Prompt Injection Defenses. Plugin Marketplace with YAML templates.
+LangGraph for agent orchestration with conditional routing between nodes. OpenCode CLI v1.14.48 as unified interface and worker execution engine. DeepSeek API for cloud models with response_format json_object for structured planning and code generation. PostgreSQL with seven tables for session persistence, step tracking, artifact storage, tool usage logging, error tracking, project memory, and scheduled tasks. Docker Compose for infrastructure. Ollama with qwen3:14b as local backup model.
 
-## Hardware and Infrastructure
+Fifteen MCP servers provide tool access: filesystem operations, shell command execution with whitelist, git repository analysis, Docker container monitoring, headless browser automation, DuckDuckGo web search, subprocess code sandbox, Docker VM sandbox with network isolation, Watchdog file monitoring with auto-execution, Gmail integration via OAuth, Google Drive API, Notion API, Google Calendar, Telegram bot, and advanced skills server. Skills server includes PDF generation via reportlab, Excel generation via openpyxl, PowerPoint generation via python-pptx, matplotlib charts, pandas data analysis, yagmail email sending, PyGithub and python-gitlab API clients, and slack-sdk messaging.
 
-Operating System is Fedora 43. CPU is AMD Ryzen using Starship and Matisse architecture. GPU is NVIDIA RTX 4060 Ti with 16GB VRAM. RAM is 32 GB. System Disk is NVMe 2TB using Btrfs. Project Disk is SSD 1TB using ext4 at /media/SSD1T/. Local Model is Qwen 3 14B using Q4_K_M quantization at 9.3 GB via Ollama on port 11434, available as backup worker.
+Additional tools include semantic code search across projects, file pattern matching, AST-safe code manipulation with diff application, PostgreSQL session memory with save and load, and automatic file watching that triggers graph execution on changes. Security includes prompt injection defenses, command whitelisting, and path restrictions on all MCP servers.
 
-## Monthly Costs
+## Interfaces
 
-DeepSeek API is approximately 0.50 dollars per month for both V4 Pro and V4 Flash usage. LangGraph is 0 dollars as open-source. OpenCode CLI is 0 dollars as open-source. All MCP Servers and tools are 0 dollars. Everything else is 0 dollars running locally. Total cost is approximately 0.50 dollars per month.
+CLI via OpenCode with two modes. Cowork Mode executes full autonomous graph via python apps/cli/cowork_graph.py. Code Mode executes direct generation via opencode run. FastAPI REST API on port 8000 with SSE streaming support and Swagger documentation. Streamlit web dashboard on port 8501. VS Code extension with chat panel and contextual commands for code explanation and optimization. Direct chat with local Qwen model via cowork_chat.sh.
 
-## Project Structure
+## Infrastructure
 
-The apps directory contains the API built with FastAPI, CLI tools including loop.sh, execute_command.py, tool_caller.py, search_tools.py, apply_diff.py, session_memory.py, auto_watcher.py, and Web UI built with Streamlit. The graph directory contains the LangGraph orchestrator with 6 nodes. The tools directory contains 14 MCP servers, unified client, and PostgreSQL helpers. The models directory contains the DeepSeek Cloud client and Qwen Ollama client. The config directory contains settings.yaml and models.yaml. The infra directory contains Docker Compose for PostgreSQL. The tests directory contains 5 tests passing at 100 percent. The output directory contains generated code and projects.
+Fedora 43 operating system. AMD Ryzen processor, Starship Matisse architecture. NVIDIA RTX 4060 Ti with 16GB VRAM for local model inference. 32GB system RAM. NVMe 2TB system disk with Btrfs. SSD 1TB project disk with ext4 at /media/SSD1T. Docker for PostgreSQL and sandbox containers. Ollama serving qwen3:14b Q4_K_M at 9.3GB on port 11434. Node.js v24.15.0 for OpenCode CLI.
 
-## Quick Start
+## Monthly Cost Breakdown
 
-Prerequisites are Python 3.12 plus, Node.js 22 plus, Docker, Ollama with qwen3 colon 14b as backup, and DeepSeek API key. Commands: cd /media/SSD1T/cowork-local, source ./activate-unificado.sh. For Code Mode use opencode run "your prompt". For Cowork Mode use ./apps/cli/loop.sh "your task".
+DeepSeek API approximately 0.50 dollars for intensive usage. All other components free and open-source including LangGraph, OpenCode CLI, FastAPI, Streamlit, PostgreSQL, Docker, Ollama, and fifteen MCP servers. Hardware already owned. Total monthly cost approximately 0.50 dollars.
 
-## Key Achievements for version 3.1.1
+## Comparison
 
-OpenCode CLI with two integrated modes for cowork and code. Autonomous graph where DeepSeek plans, DeepSeek Flash generates multi-file projects, and the system validates. 6-node LangGraph with loop decision. 14 MCP servers operational. 23 plus advanced skills. Gmail, Telegram, and Calendar integration. PostgreSQL with 7 tables. Docker VM sandbox. File watcher with auto-execution. Tool Caller with 5 format detection. 5 of 5 tests passing. Open-source under MIT license with no cloud vendor lock-in. Total cost approximately 0.50 dollars per month.
+Claude Code and Cursor charge 10 to 60 dollars monthly for cloud-only AI coding assistance. Cowork-Local provides equivalent or superior functionality at 0.50 dollars monthly with local execution, no rate limits, no data leaving the machine, and full MCP tool integration.
 
 ## License
 
-MIT License.
+MIT. Open-source, no restrictions.

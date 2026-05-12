@@ -512,19 +512,19 @@ async def call_tool(name: str, args: dict[str, Any]) -> list[TextContent]:
     if name == "generate_tests":
         code = args.get("code", "")
         import httpx
-        r = httpx.post("http://localhost:11434/api/generate", json={"model":"qwen3:14b","prompt":f"Genera SOLO tests unitarios con pytest:\n\n{code}","stream":False,"options":{"num_predict":1024,"temperature":0.2}}, timeout=60)
+        import os; key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Genera SOLO tests unitarios con pytest:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
         return [TextContent(type="text", text=r.json().get("response","") or r.json().get("thinking","")[:3000])]
     
     if name == "review_code":
         code = args.get("code", "")
         import httpx
-        r = httpx.post("http://localhost:11434/api/generate", json={"model":"qwen3:14b","prompt":f"Revisa bugs, mejoras y buenas practicas:\n\n{code}","stream":False,"options":{"num_predict":1024,"temperature":0.2}}, timeout=60)
+        import os; key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Revisa bugs, mejoras y buenas practicas:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
         return [TextContent(type="text", text=r.json().get("response","") or r.json().get("thinking","")[:3000])]
     
     if name == "generate_docs":
         code = args.get("code", "")
         import httpx
-        r = httpx.post("http://localhost:11434/api/generate", json={"model":"qwen3:14b","prompt":f"Genera docstrings y documentacion:\n\n{code}","stream":False,"options":{"num_predict":1024,"temperature":0.2}}, timeout=60)
+        import os; key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Genera docstrings y documentacion:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
         return [TextContent(type="text", text=r.json().get("response","") or r.json().get("thinking","")[:3000])]
     
     return [TextContent(type="text", text=f"❓ Skill no encontrado: {name}")]

@@ -1,6 +1,6 @@
-# Contributing to Cowork-Local v3.1.1
+# Contributing to Cowork-Local v3.2
 
-Thanks for your interest in contributing. OpenCode CLI as unified interface with two modes. DeepSeek Cloud brain using V4 Pro and V4 Flash. LangGraph orchestrates 6 nodes with multi-file JSON output. 14 MCP Servers. 23 Skills. 5 tests passing.
+Multi-agent development assistant with DeepSeek V4 Pro planner and OpenCode Flash FREE worker. LangGraph 6-node orchestrator. 15 MCP Servers. PostgreSQL memory. 5 tests passing.
 
 ## Development Setup
 
@@ -17,27 +17,21 @@ npm install -g opencode-ai
 
 ## Prerequisites
 
-Python 3.12 plus with venv. Node.js 22 plus with npm. Docker and Docker Compose. Ollama with qwen3 colon 14b as backup worker. DeepSeek API key. Git. OpenCode CLI installed globally.
+Python 3.12 plus with venv. Node.js 22 plus with npm. Docker and Docker Compose. Ollama with qwen3:14b as backup worker. DeepSeek API key. Git. OpenCode CLI installed globally.
 
-## Project Statistics
+## Architecture Guidelines
 
-OpenCode CLI v1.14.48. 6-node LangGraph with multi-file JSON generation and auto-install plus auto-tests. 14 MCP Servers. 7 PostgreSQL tables. 23 plus Skills. 5 tests passing. Architecture: 1 Brain using DeepSeek V4 Pro and V4 Flash plus LangGraph 6 nodes plus 14 MCP Servers.
+Adding a Graph Node: Add function to graph/graph.py. Register with workflow.add_node. Update routing logic. Update state.py if needed.
+
+Adding an MCP Server: Create tools/mcp/name/server.py. Implement call_tool. Register in tools/mcp_client.py. Add security rules to config/settings.yaml.
+
+Adding a Skill: Add tool definition to tools/mcp/skills/server.py. Implement handler. Add package to requirements.txt. Update OPENCODE.md.
+
+Adding a CLI Tool: Create script in apps/cli. Integrate into LangGraph node if needed. Update OPENCODE.md.
 
 ## Code Style
 
 PEP 8. 4 spaces indentation. Max 100 chars per line. Type hints on public functions. Google-style docstrings.
-
-## Architecture Guidelines
-
-Adding a Graph Node: Add function to graph.py. Register with workflow.add_node. Update routing logic. Update state.py if needed.
-
-Adding an MCP Server: Create tools/mcp/name/server.py. Implement call_tool. Register in tools/mcp_client.py. Add security rules to config/settings.yaml.
-
-Adding a Skill: Add tool definition to tools/mcp/skills/server.py. Implement handler. Add package to requirements.txt. Update docs.
-
-Adding a CLI Tool: Create script in apps/cli. Integrate into LangGraph node if needed. Update OPENCODE.md.
-
-Updating Worker Prompt: Edit apps/cli/worker_prompt.txt with new instructions. Graph reloads automatically on next run.
 
 ## Pull Request Process
 

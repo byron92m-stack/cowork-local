@@ -10,6 +10,9 @@ build/
 # Variables de entorno
 .env
 
+# Credenciales
+credentials.json
+
 # Datos generados
 data/logs/*
 data/projects/*
@@ -27,10 +30,7 @@ infra/docker-compose.override.yml
 .DS_Store
 Thumbs.db
 
-# Backup locales
-*.tar.gz
+# Proyectos generados
 output/
 cowork-vscode/
 node_modules/
-cowork-vscode/
-credentials.json

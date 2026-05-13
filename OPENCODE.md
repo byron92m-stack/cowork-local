@@ -15,10 +15,20 @@ DeepSeek V4 Pro via OpenCode CLI. Native tool calling. Generate code, explain, a
 - Local backup: qwen3:14b via Ollama on port 11434
 
 ## Rules
+See `rules/` for detailed conventions:
+- `rules/api.md` — FastAPI patterns, Pydantic validation, Swagger docs
+- `rules/security.md` — Secrets management, env vars, input sanitization
+
+Core rules:
 - Prioritize code generation over explanations
 - Do not modify files without asking
 - Use absolute paths: /media/SSD1T/cowork-local/
 - When user asks to create/generate code, use python apps/cli/cowork_graph.py "task"
+
+## Agents
+See `agents/` for agent definitions:
+- `agents/code-reviewer.md` — Reviews diffs for bugs, performance, best practices. Returns JSON with issues array.
+- `agents/test-generator.md` — Generates pytest tests with mocks. Covers success, errors, edge cases. Minimum 15 tests.
 
 ## Tools
 
@@ -59,18 +69,27 @@ DeepSeek V4 Pro via OpenCode CLI. Native tool calling. Generate code, explain, a
 - Google Calendar: Create events via email invitations with calendar_add
 - File Watcher: Auto-detects file changes and triggers graph via auto_watcher.py
 
+### MCP Servers
+15 MCP servers configured in `.mcp.json`: filesystem, shell, git, docker, browser, websearch, code_sandbox, filewatcher, docker_sandbox, gmail, googledrive, notion, skills, telegram, calendar.
+
 ## Testing
 - pytest tests/ -v — run all tests, currently 5 out of 5 passing
 - Auto-tests run on every cowork_graph.py execution
 - Loop retries up to 4 iterations if tests fail
 
+## Hooks
+- `hooks/pre-commit.sh` — runs pytest and git status before commit
+- `hooks/post-generate.sh` — runs pytest after code generation
+
 ## Project Structure
 - apps/ — API (FastAPI), CLI tools (cowork_graph.py, loop.sh, search_tools.py, apply_diff.py, session_memory.py, auto_watcher.py)
 - graph/ — LangGraph orchestrator (planner, worker_opencode, validation, review, decision)
-- tools/ — 15 MCP servers (browser, calendar, code_sandbox, docker, docker_sandbox, filesystem, filewatcher, git, gmail, notion, shell, skills, telegram, websearch)
+- tools/ — 15 MCP servers (browser, calendar, code_sandbox, docker, docker_sandbox, filesystem, filewatcher, git, gmail, googledrive, notion, shell, skills, telegram, websearch)
 - models/ — DeepSeek client and Qwen Ollama client
 - config/ — settings.yaml and models.yaml
+- rules/ — Coding conventions (api.md, security.md)
+- agents/ — AI agent definitions (code-reviewer.md, test-generator.md)
+- hooks/ — Automation scripts (pre-commit.sh, post-generate.sh)
 - infra/ — Docker Compose for PostgreSQL
 - output/ — Generated projects
 - plugins/ — Skill marketplace with templates
-

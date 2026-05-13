@@ -18,7 +18,7 @@ async def list_tools() -> list[Tool]:
 @server.call_tool()
 async def call_tool(name: str, args: dict[str, Any]) -> list[TextContent]:
     if name == "telegram_setup":
-        return [TextContent(type="text", text="📱 Bot: @byron92m_bot | Chat ID: 8047752200")]
+        return [TextContent(type="text", text="📱 Bot: @byron92m_bot | Chat ID: ${TELEGRAM_CHAT_ID}")]
     
     elif name == "telegram_send":
         token = os.getenv("TELEGRAM_BOT_TOKEN","")

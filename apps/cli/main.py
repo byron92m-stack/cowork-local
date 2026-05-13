@@ -52,7 +52,7 @@ def cmd_check(args):
             host="localhost",
             port=5432,
             user="cowork",
-            password="coworkpass",
+            password=os.getenv("POSTGRES_PASSWORD", "coworkpass"),
             database="coworkdb",
             connect_timeout=5,
         )

@@ -23,7 +23,7 @@ def load_history(limit=5):
     from psycopg2.extras import RealDictCursor
     conn = psycopg2.connect(
         host="localhost", port=5432, user="cowork",
-        password="coworkpass", database="coworkdb"
+        password=os.getenv("POSTGRES_PASSWORD", "coworkpass"), database="coworkdb"
     )
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("""
@@ -40,7 +40,7 @@ def load_last_artifacts(session_id=None):
     import psycopg2
     conn = psycopg2.connect(
         host="localhost", port=5432, user="cowork",
-        password="coworkpass", database="coworkdb"
+        password=os.getenv("POSTGRES_PASSWORD", "coworkpass"), database="coworkdb"
     )
     cur = conn.cursor()
     if session_id:

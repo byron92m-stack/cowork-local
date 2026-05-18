@@ -5,6 +5,8 @@ Streaming support with Server-Sent Events (SSE).
 import sys
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -26,7 +28,7 @@ from apps.api.streaming import setup_streaming_routes
 # ─── Función helper para conexión a DB ───────────────────────
 def _get_db_connection():
     return psycopg2.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
+        host=os.getenv("POSTGRES_HOST", "127.0.0.1"),
         port=os.getenv("POSTGRES_PORT", "5432"),
         user=os.getenv("POSTGRES_USER", "cowork"),
         password=os.getenv("POSTGRES_PASSWORD"),
@@ -196,3 +198,49 @@ if __name__ == "__main__":
     print("📡 Stream: http://localhost:8000/stream/demo")
     print("📖 Swagger: http://localhost:8000/docs")
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.get("/session/{session_id}/artifacts")
+async def get_session_artifacts(session_id: str):
+    conn = None
+    try:
+        conn = _get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM artifacts WHERE session_id = %s ORDER BY created_at DESC", (session_id,))
+            rows = cur.fetchall()
+            return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()
+
+@app.delete("/session/{session_id}")
+async def delete_session(session_id: str):
+    conn = None
+    try:
+        conn = _get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM artifacts WHERE session_id = %s", (session_id,))
+            cur.execute("DELETE FROM steps WHERE session_id = %s", (session_id,))
+            cur.execute("DELETE FROM sessions WHERE id = %s", (session_id,))
+        conn.commit()
+        return {"status": "deleted", "session_id": session_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()
+
+@app.post("/sessions/cleanup")
+async def cleanup_sessions():
+    conn = None
+    try:
+        conn = _get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM artifacts WHERE session_id IN (SELECT id FROM sessions WHERE created_at < '2026-05-12')")
+            cur.execute("DELETE FROM steps WHERE session_id IN (SELECT id FROM sessions WHERE created_at < '2026-05-12')")
+            cur.execute("DELETE FROM sessions WHERE created_at < '2026-05-12'")
+        conn.commit()
+        return {"status": "cleaned", "before": "2026-05-12"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()

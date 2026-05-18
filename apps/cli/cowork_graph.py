@@ -10,7 +10,7 @@ print(f"$ opencode run \"{QUERY[:60]}...\"\n")
 # Ejecutar OpenCode directamente desde Cowork
 result = subprocess.run(
     ["opencode", "run", QUERY],
-    capture_output=True, text=True, timeout=300,
+    capture_output=True, text=True, timeout=1200,
     cwd=COWORK_DIR,
     env={**os.environ, "OPENCODE_MODE": "auto"}
 )

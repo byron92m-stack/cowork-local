@@ -1,6 +1,6 @@
 # Contributing to Cowork-Local v3.2
 
-Multi-agent development assistant with DeepSeek V4 Pro planner and OpenCode Flash FREE worker. LangGraph 6-node orchestrator. 15 MCP Servers. PostgreSQL memory. 5 tests passing.
+Multi-agent development assistant with DeepSeek V4 Pro planner and OpenCode Flash FREE worker. LangGraph 5-node orchestrator. 16 MCP Servers. PostgreSQL memory. 6 projects 100% tests.
 
 ## Development Setup
 
@@ -12,7 +12,7 @@ pip install -r requirements.txt
 docker compose -f infra/docker-compose.yml up -d
 ollama pull qwen3:14b
 cp .env.example .env
-npm install -g opencode-ai
+npm install -g opencode-ai && opencode plugin opencode-vscode -g
 ./cowork check
 
 ## Prerequisites
@@ -32,6 +32,10 @@ Adding a CLI Tool: Create script in apps/cli. Integrate into LangGraph node if n
 ## Code Style
 
 PEP 8. 4 spaces indentation. Max 100 chars per line. Type hints on public functions. Google-style docstrings.
+
+Adding an n8n Workflow: Create JSON via Cowork (python apps/cli/cowork_graph.py "task"). Import via n8n API or UI on port 5678. Configure credentials in n8n UI. Activate toggle.
+
+Updating Graphify: Run graphify update . after significant code changes. Commit updated graphify-out/GRAPH_REPORT.md. Planner reads it automatically.
 
 ## Pull Request Process
 

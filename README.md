@@ -4,41 +4,43 @@ AI-powered system that generates complete, tested, production-ready Python CLI p
 
 ## Results Summary
 
-Four consecutive projects generated in a single iteration with FREE model, all tests passing:
+Six consecutive projects generated in a single iteration with FREE model, all tests passing:
 
-webreq 34/34 passing. CLI for HTTP requests with six argparse flags, requests library, unittest.mock tests for all HTTP methods, JSON parsing, timeout handling, and verbose output. 12 CLI tests, 22 core tests.
+webreq 34/34. HTTP requests CLI with six argparse flags, unittest.mock tests for all HTTP methods, JSON parsing, timeout handling. 12 CLI tests, 22 core tests.
 
-logview 32/32 passing. Log file analyzer with six argparse flags, LogAnalyzer class with parse, filter, tail, to_json, and stats methods. Regex-based log level detection (ERROR, WARN, INFO, DEBUG). 32 pytest tests using temp files.
+logview 32/32. Log file analyzer with six flags, LogAnalyzer class with parse, filter, tail, to_json, and stats. Regex-based log level detection. 32 pytest tests using temp files.
 
-gitstat 48/48 passing. Git repository statistics with six argparse flags, GitStats class using subprocess to run git commands. Per-author commit counts, insertions, deletions, file changes. Output formats: table, JSON, CSV. 48 tests with temp git repos.
+gitstat 48/48. Git repository statistics with six flags, GitStats class using subprocess. Per-author commit counts, insertions, deletions. Output formats: table, JSON, CSV. 48 tests with temp git repos.
 
-tcpdump-cli 41/41 passing. Network packet analyzer CLI with seven argparse flags using scapy library. Interface selection, port filtering, protocol filtering, BPF filter support, verbose mode, output file. 41 tests with mocks.
+tcpdump-cli 41/41. Network packet analyzer with seven flags using scapy. Interface selection, port filtering, protocol filtering, BPF support, verbose mode. 41 tests with mocks.
+
+ai-reviewer 52/52. Code reviewer using DeepSeek API with seven flags. CodeReviewer class, multiple output formats (text/json/markdown), severity levels. 52 tests with unittest.mock.
+
+graph-report 34/34. CLI that reads Graphify output. ReportParser class, top N nodes, community filtering. 34 tests with temp files.
 
 ## Architecture
 
-Multi-agent LangGraph pipeline with six nodes. Planner node uses DeepSeek V4 Pro to generate a structured JSON plan from natural language. Worker node executes plan via OpenCode CLI with DeepSeek V4 Flash FREE model, generating all project files simultaneously. Validation node runs pytest automatically. Review node evaluates test results against original requirements. Decision node determines whether project is complete or requires additional iterations. Maximum four iterations configured, all recent projects completed in one.
+Multi-agent LangGraph pipeline with five nodes. Planner uses DeepSeek V4 Pro to generate structured JSON plan. Worker executes via OpenCode CLI with DeepSeek V4 Flash FREE model, generating all project files. Validation runs pytest automatically. Review evaluates results. Decision determines completion or loop retry. Maximum five iterations. Telegram notification via n8n on every completion.
 
-System operates with sub-cent cost per project. Planner calls DeepSeek Pro once at approximately 0.001 dollars. Worker uses completely free Flash model for unlimited code generation. No cloud vendor lock-in. Entire pipeline runs on local hardware.
+Redis provides fast state sharing between iterations and planner response caching. PostgreSQL persists sessions, steps, artifacts, errors, and project memory across seven tables. Graphify maps the codebase into 771 nodes and 1145 edges for architectural awareness.
 
 ## Technical Stack
 
-LangGraph for agent orchestration with conditional routing between nodes. OpenCode CLI v1.14.48 as unified interface and worker execution engine. DeepSeek API for cloud models with response_format json_object for structured planning and code generation. PostgreSQL with seven tables for session persistence, step tracking, artifact storage, tool usage logging, error tracking, project memory, and scheduled tasks. Docker Compose for infrastructure. Ollama with qwen3:14b as local backup model.
+LangGraph for agent orchestration. OpenCode CLI as unified interface and worker engine. DeepSeek API for cloud models. PostgreSQL + Redis for persistence and caching. Docker Compose for PostgreSQL, Redis, and n8n. Ollama with qwen3:14b as local backup model. n8n on port 5678 with native MCP server for workflow automation.
 
-Fifteen MCP servers provide tool access: filesystem operations, shell command execution with whitelist, git repository analysis, Docker container monitoring, headless browser automation, DuckDuckGo web search, subprocess code sandbox, Docker VM sandbox with network isolation, Watchdog file monitoring with auto-execution, Gmail integration via OAuth, Google Drive API, Notion API, Google Calendar, Telegram bot, and advanced skills server. Skills server includes PDF generation via reportlab, Excel generation via openpyxl, PowerPoint generation via python-pptx, matplotlib charts, pandas data analysis, yagmail email sending, PyGithub and python-gitlab API clients, and slack-sdk messaging.
-
-Additional tools include semantic code search across projects, file pattern matching, AST-safe code manipulation with diff application, PostgreSQL session memory with save and load, and automatic file watching that triggers graph execution on changes. Security includes prompt injection defenses, command whitelisting, and path restrictions on all MCP servers.
+Sixteen MCP servers: filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, filewatcher, gmail, googledrive, notion, calendar, telegram, skills, postgresql, plus n8n-mcp. Skills server includes PDF, Excel, PowerPoint generation, matplotlib charts, pandas analysis, email sending, GitHub/GitLab APIs, and Slack messaging.
 
 ## Interfaces
 
-CLI via OpenCode with two modes. Cowork Mode executes full autonomous graph via python apps/cli/cowork_graph.py. Code Mode executes direct generation via opencode run. FastAPI REST API on port 8000 with SSE streaming support and Swagger documentation. Streamlit web dashboard on port 8501. VS Code extension with chat panel and contextual commands for code explanation and optimization. Direct chat with local Qwen model via cowork_chat.sh.
+Cowork Mode via python apps/cli/cowork_graph.py. Code Mode via opencode run. FastAPI REST API on port 8000 with SSE streaming and Swagger. OpenCode Web UI. VS Code via opencode-vscode extension with chat panel and contextual commands. Direct chat with Qwen via cowork_chat.sh. n8n dashboard on port 5678.
 
 ## Infrastructure
 
-Fedora 43 operating system. AMD Ryzen processor, Starship Matisse architecture. NVIDIA RTX 4060 Ti with 16GB VRAM for local model inference. 32GB system RAM. NVMe 2TB system disk with Btrfs. SSD 1TB project disk with ext4 at /media/SSD1T. Docker for PostgreSQL and sandbox containers. Ollama serving qwen3:14b Q4_K_M at 9.3GB on port 11434. Node.js v24.15.0 for OpenCode CLI.
+Fedora 43. AMD Ryzen Starship Matisse. NVIDIA RTX 4060 Ti 16GB VRAM. 32GB RAM. NVMe 2TB (Btrfs) + SSD 1TB (ext4). Docker for PostgreSQL, Redis, n8n. Ollama qwen3:14b Q4_K_M 9.3GB. Node.js v24.15.0.
 
-## Monthly Cost Breakdown
+## Monthly Cost
 
-DeepSeek API approximately 0.50 dollars for intensive usage. All other components free and open-source including LangGraph, OpenCode CLI, FastAPI, Streamlit, PostgreSQL, Docker, Ollama, and fifteen MCP servers. Hardware already owned. Total monthly cost approximately 0.50 dollars.
+DeepSeek API approximately 0.50 dollars for intensive usage. All other components free and open-source. Hardware already owned. Total approximately 0.50 dollars per month.
 
 ## Comparison
 

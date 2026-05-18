@@ -2,7 +2,7 @@
 
 ## Overview
 
-Multi-agent system with DeepSeek V4 Pro planner and OpenCode worker using DeepSeek V4 Flash FREE for code generation. LangGraph orchestrator with 6 nodes. 15 MCP Servers. PostgreSQL memory with 7 tables. File Watcher with auto-execution. VS Code extension. Gmail, Telegram, Calendar integrations. 5 tests passing. Cost approximately 0.50 dollars per month.
+Multi-agent system with DeepSeek V4 Pro planner and OpenCode worker using DeepSeek V4 Flash FREE for code generation. LangGraph orchestrator with 5 nodes. 16 MCP Servers. PostgreSQL memory with 7 tables. File Watcher with auto-execution. VS Code extension. Gmail, Telegram, Calendar integrations. 6 projects 100% tests passing. Cost approximately 0.50 dollars per month.
 
 ## Multi-Agent Pipeline
 
@@ -16,7 +16,7 @@ Review node evaluates test results and completeness. If all tests pass and proje
 
 Decision node checks completion status. If complete with zero failing tests, ends execution. If maximum iterations reached, ends with warning. Otherwise routes back to planner for another attempt with accumulated error context.
 
-Maximum 4 iterations configured. All recent projects completed in 1 iteration.
+Maximum 5 iterations configured. All recent projects completed in 1 iteration.
 
 ## Models
 
@@ -32,7 +32,7 @@ cowork_graph.py executes the full multi-agent graph via python apps/cli/cowork_g
 
 ## MCP Servers
 
-15 servers operational. Filesystem for read, write, list, and search with path restrictions. Shell for command execution with whitelist. Git for status, diff, log, and branch in read-only mode. Docker for ps, logs, inspect, and stats in read-only mode. Browser for navigate, click, fill, screenshot, and extract in headless mode. WebSearch for DuckDuckGo search and page fetch. Code Sandbox for subprocess execution. Docker Sandbox for isolated execution without network. File Watcher using Watchdog for directory monitoring with auto-execution. Gmail for send and read via OAuth. Google Drive for list, upload, and download via API key. Notion for pages and databases via API token. Calendar for event creation via email invitations. Telegram for send and read via bot. Skills with 23 plus tools including PDF generation via reportlab, Excel via openpyxl, PowerPoint via python-pptx, charts via matplotlib, data analysis via pandas, email via yagmail, web search via ddgs, GitHub via PyGithub, GitLab via python-gitlab, and Slack via slack-sdk.
+16 servers operational. Filesystem for read, write, list, and search with path restrictions. Shell for command execution with whitelist. Git for status, diff, log, and branch in read-only mode. Docker for ps, logs, inspect, and stats in read-only mode. Browser for navigate, click, fill, screenshot, and extract in headless mode. WebSearch for DuckDuckGo search and page fetch. Code Sandbox for subprocess execution. Docker Sandbox for isolated execution without network. File Watcher using Watchdog for directory monitoring with auto-execution. Gmail for send and read via OAuth. Google Drive for list, upload, and download via API key. Notion for pages and databases via API token. Calendar for event creation via email invitations. Telegram for send and read via bot. Skills with 23 plus tools including PDF generation via reportlab, Excel via openpyxl, PowerPoint via python-pptx, charts via matplotlib, data analysis via pandas, email via yagmail, web search via ddgs, GitHub via PyGithub, GitLab via python-gitlab, and Slack via slack-sdk.
 
 ## PostgreSQL
 
@@ -40,11 +40,23 @@ Seven tables for complete persistence. sessions table records each conversation 
 
 ## Integrations
 
-Gmail via dedicated bot account with OAuth for reading and sending emails. Telegram via at byron92m_bot for sending notifications and reading commands. Google Calendar via email invitations using ICS files for event creation. File Watcher using Watchdog library that detects changes in monitored directories and triggers graph execution automatically. VS Code extension with WebView chat panel and contextual commands bound to Ctrl+Shift+C for chat, Ctrl+Shift+E for explain, and Ctrl+Shift+O for optimize.
+Gmail via dedicated bot account with OAuth for reading and sending emails. Telegram via at byron92m_bot for sending notifications and reading commands. Google Calendar via email invitations using ICS files for event creation. File Watcher using Watchdog library that detects changes in monitored directories and triggers graph execution automatically. VS Code via opencode-vscode extension and contextual commands bound to Ctrl+Shift+C for chat, Ctrl+Shift+E for explain, and Ctrl+Shift+O for optimize.
 
 ## Interfaces
 
 OpenCode CLI v1.14.48 as primary interface with two modes. Cowork Mode executes full graph via python apps/cli/cowork_graph.py. Code Mode executes direct generation via opencode run. FastAPI REST API on port 8000 with SSE streaming and Swagger UI. Streamlit web dashboard on port 8501. VS Code extension with chat panel and contextual commands. Direct chat with local Qwen model via cowork_chat.sh.
+
+## Redis
+
+Redis provides fast in-memory state sharing between LangGraph iterations. Planner responses are cached for 1 hour to reduce API calls. Failed test names are stored between loops for targeted fixes. Completion summaries saved with 1 hour TTL.
+
+## n8n
+
+n8n runs on port 5678 with native MCP server. Skills installed in .opencode/skills/n8n/ for workflow generation (code-javascript, code-python, expression-syntax, mcp-tools-expert, node-configuration, validation-expert, workflow-patterns). Invoice Bot processes emails every 5 minutes, extracts data via DeepSeek, and stores in PostgreSQL. Telegram notifications on project completion.
+
+## Graphify
+
+Code knowledge graph with 771 nodes, 1145 edges, and 42 communities. Planner automatically reads graphify-out/GRAPH_REPORT.md for architectural context. Updated via graphify update . after code changes. OpenCode queries via /graphify query.
 
 ## Security
 
@@ -56,8 +68,8 @@ Fedora 43 operating system. AMD Ryzen Starship Matisse processor. NVIDIA RTX 406
 
 ## Project Structure
 
-apps directory contains FastAPI REST API with SSE streaming, CLI command center with cowork_graph.py and loop.sh, and Streamlit web dashboard. graph directory contains LangGraph orchestrator with state management and six nodes. tools directory contains 15 MCP servers, unified client, PostgreSQL helpers, scheduler, security module, knowledge base, workspace manager, heartbeat monitor, auto-executor, and notifier. models directory contains DeepSeek cloud client and Qwen Ollama client. config directory contains settings.yaml and models.yaml. infra directory contains Docker Compose for PostgreSQL with initialization SQL. tests directory contains 5 tests currently passing. output directory stores generated projects. plugins directory contains skill marketplace with YAML templates and plugin manager.
+apps directory contains FastAPI REST API with SSE streaming, CLI command center with cowork_graph.py and loop.sh, and Streamlit web dashboard. graph directory contains LangGraph orchestrator with state management and six nodes. tools directory contains 16 MCP servers, unified client, PostgreSQL helpers, scheduler, security module, knowledge base, workspace manager, heartbeat monitor, auto-executor, and notifier. models directory contains DeepSeek cloud client and Qwen Ollama client. config directory contains settings.yaml and models.yaml. infra directory contains Docker Compose for PostgreSQL with initialization SQL. tests directory contains 5 tests currently passing. output directory stores generated projects. plugins directory contains skill marketplace with YAML templates and plugin manager.
 
 ## Monthly Cost
 
-DeepSeek API approximately 0.50 dollars for intensive usage across all models. All other components free and open-source including LangGraph, OpenCode CLI, FastAPI, Streamlit, PostgreSQL, Docker, Ollama, and 15 MCP servers. Hardware already owned. Total approximately 0.50 dollars per month.
+DeepSeek API approximately 0.50 dollars for intensive usage across all models. All other components free and open-source including LangGraph, OpenCode CLI, FastAPI, Streamlit, PostgreSQL, Docker, Ollama, and 16 MCP servers. Hardware already owned. Total approximately 0.50 dollars per month.

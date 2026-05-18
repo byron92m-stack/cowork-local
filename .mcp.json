@@ -1,79 +1,139 @@
 {
   "mcpServers": {
     "filesystem": {
-      "command": "python",
-      "args": ["-m", "tools.mcp.filesystem.server"],
-      "env": {}
+      "command": "python3",
+      "args": [
+        "-m",
+        "tools.mcp.filesystem.server"
+      ],
+      "cwd": "/media/SSD1T/cowork-local"
     },
     "shell": {
-      "command": "python",
-      "args": ["-m", "tools.mcp.shell.server"],
-      "env": {}
+      "command": "python3",
+      "args": [
+        "-m",
+        "tools.mcp.shell.server"
+      ],
+      "cwd": "/media/SSD1T/cowork-local"
     },
     "git": {
       "command": "python",
-      "args": ["-m", "tools.mcp.git.server"],
+      "args": [
+        "-m",
+        "tools.mcp.git.server"
+      ],
       "env": {}
     },
     "docker": {
       "command": "python",
-      "args": ["-m", "tools.mcp.docker.server"],
+      "args": [
+        "-m",
+        "tools.mcp.docker.server"
+      ],
       "env": {}
     },
     "browser": {
       "command": "python",
-      "args": ["-m", "tools.mcp.browser.server"],
+      "args": [
+        "-m",
+        "tools.mcp.browser.server"
+      ],
       "env": {}
     },
     "websearch": {
       "command": "python",
-      "args": ["-m", "tools.mcp.websearch.server"],
+      "args": [
+        "-m",
+        "tools.mcp.websearch.server"
+      ],
       "env": {}
     },
     "code_sandbox": {
       "command": "python",
-      "args": ["-m", "tools.mcp.code_sandbox.server"],
+      "args": [
+        "-m",
+        "tools.mcp.code_sandbox.server"
+      ],
       "env": {}
     },
     "filewatcher": {
       "command": "python",
-      "args": ["-m", "tools.mcp.filewatcher.server"],
+      "args": [
+        "-m",
+        "tools.mcp.filewatcher.server"
+      ],
       "env": {}
     },
     "docker_sandbox": {
       "command": "python",
-      "args": ["-m", "tools.mcp.docker_sandbox.server"],
+      "args": [
+        "-m",
+        "tools.mcp.docker_sandbox.server"
+      ],
       "env": {}
     },
     "gmail": {
       "command": "python",
-      "args": ["-m", "tools.mcp.gmail.server"],
+      "args": [
+        "-m",
+        "tools.mcp.gmail.server"
+      ],
       "env": {}
     },
     "googledrive": {
       "command": "python",
-      "args": ["-m", "tools.mcp.googledrive.server"],
+      "args": [
+        "-m",
+        "tools.mcp.googledrive.server"
+      ],
       "env": {}
     },
     "notion": {
       "command": "python",
-      "args": ["-m", "tools.mcp.notion.server"],
+      "args": [
+        "-m",
+        "tools.mcp.notion.server"
+      ],
       "env": {}
     },
     "skills": {
       "command": "python",
-      "args": ["-m", "tools.mcp.skills.server"],
+      "args": [
+        "-m",
+        "tools.mcp.skills.server"
+      ],
       "env": {}
     },
     "telegram": {
       "command": "python",
-      "args": ["-m", "tools.mcp.telegram.server"],
+      "args": [
+        "-m",
+        "tools.mcp.telegram.server"
+      ],
       "env": {}
     },
     "calendar": {
       "command": "python",
-      "args": ["-m", "tools.mcp.calendar.server"],
+      "args": [
+        "-m",
+        "tools.mcp.calendar.server"
+      ],
       "env": {}
+    },
+    "n8n-mcp": {
+      "type": "http",
+      "url": "http://localhost:5678/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer YOUR_N8N_MCP_TOKEN"
+      }
+    },
+    "postgresql": {
+      "command": "python3",
+      "args": [
+        "-m",
+        "tools.mcp.postgresql.server"
+      ],
+      "cwd": "/media/SSD1T/cowork-local"
     }
   }
 }

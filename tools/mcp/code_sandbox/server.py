@@ -1,3 +1,4 @@
+from typing import Dict, Any
 """Code Sandbox MCP Server - Execute code in isolated environment."""
 import os
 import subprocess

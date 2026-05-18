@@ -34,3 +34,6 @@ Thumbs.db
 output/
 cowork-vscode/
 node_modules/
+graphify-out/
+.opencode/
+output/archive/

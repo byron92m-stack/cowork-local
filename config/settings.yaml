@@ -27,7 +27,7 @@ database:
   user: "${POSTGRES_USER:-cowork}"
   password: "${POSTGRES_PASSWORD}"
   database: "${POSTGRES_DB:-coworkdb}"
-  # String de conexión: postgresql://cowork:coworkpass@localhost:5432/coworkdb
+  # String de conexión: postgresql://USER:PASS@HOST:PORT/DB
 
 # --- Proveedores de IA ---
 providers:

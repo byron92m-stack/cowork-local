@@ -1,3 +1,4 @@
+from typing import Dict, Any
 """Notion MCP Server - Database and page operations."""
 import os
 import logging

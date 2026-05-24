@@ -24,6 +24,17 @@ Multi-agent LangGraph pipeline with five nodes. Planner uses DeepSeek V4 Pro to 
 
 Redis provides fast state sharing between iterations and planner response caching. PostgreSQL persists sessions, steps, artifacts, errors, and project memory across seven tables. Graphify maps the codebase into 771 nodes and 1145 edges for architectural awareness.
 
+## Telegram Assistant
+
+Autonomous assistant accessible via Telegram (@byron92m_bot) with five real tools:
+- **Filesystem**: Search, list, and read files using os.walk
+- **Documents**: Read and analyze PDF, Excel, CSV, TXT, MD, JSON, LOG files
+- **Web**: Navigate the internet using Playwright with Chromium headless
+- **Shell**: Execute commands with confirmation (--confirm required)
+- **Code Generation**: Create complete Python projects with pytest validation
+
+Multi-session support via Redis with commands: /list, /switch, /nueva, /cerrar, /estado, /pc. Conversation memory between messages. Automatic intent classification via DeepSeek Pro. Security: Chat ID whitelist, --confirm for dangerous actions.
+
 ## Technical Stack
 
 LangGraph for agent orchestration. OpenCode CLI as unified interface and worker engine. DeepSeek API for cloud models. PostgreSQL + Redis for persistence and caching. Docker Compose for PostgreSQL, Redis, and n8n. Ollama with qwen3:14b as local backup model. n8n on port 5678 with native MCP server for workflow automation.
@@ -36,7 +47,7 @@ Cowork Mode via python apps/cli/cowork_graph.py. Code Mode via opencode run. Fas
 
 ## Infrastructure
 
-Fedora 43. AMD Ryzen Starship Matisse. NVIDIA RTX 4060 Ti 16GB VRAM. 32GB RAM. NVMe 2TB (Btrfs) + SSD 1TB (ext4). Docker for PostgreSQL, Redis, n8n. Ollama qwen3:14b Q4_K_M 9.3GB. Node.js v24.15.0.
+Fedora 43. AMD Ryzen Starship Matisse. NVIDIA RTX 4060 Ti 16GB VRAM. 32GB RAM. NVMe 2TB (Btrfs) + SSD 1TB (ext4). Docker for PostgreSQL, Redis, n8n. Playwright with Chromium headless for web automation. Ollama qwen3:14b Q4_K_M 9.3GB. Node.js v24.15.0.
 
 ## Monthly Cost
 

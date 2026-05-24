@@ -35,6 +35,8 @@ PEP 8. 4 spaces indentation. Max 100 chars per line. Type hints on public functi
 
 Adding an n8n Workflow: Create JSON via Cowork (python apps/cli/cowork_graph.py "task"). Import via n8n API or UI on port 5678. Configure credentials in n8n UI. Activate toggle.
 
+Adding a Tool: Add elif block in execute_mcp_tool() in graph/graph.py. Add classification example in PLANNER_SYSTEM. Add type to project_type list. Update OPENCODE.md tools section.
+
 Updating Graphify: Run graphify update . after significant code changes. Commit updated graphify-out/GRAPH_REPORT.md. Planner reads it automatically.
 
 ## Pull Request Process

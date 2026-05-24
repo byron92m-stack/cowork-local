@@ -130,6 +130,12 @@ class CoworkState(BaseModel):
         """Registra un error."""
         self.errors.append(f"[{datetime.now().isoformat()}] {error}")
 
+    def continue_session(self, new_query: str) -> None:
+        """Prepara el estado para continuar una sesión existente con una nueva query."""
+        self.user_query = new_query
+        # No reiniciar iteration_count, plan, artifacts, errors
+        # El planner usará el contexto acumulado
+    
     def is_complete(self) -> bool:
         """Verifica si todos los pasos están terminados (done o failed)."""
         if len(self.plan) == 0:

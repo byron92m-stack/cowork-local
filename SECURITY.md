@@ -36,6 +36,12 @@ n8n API key stored in dotenv file excluded from Git. MCP server uses JWT authent
 
 ## Graphify Security
 Graphify output stored in graphify-out/ directory. GRAPH_REPORT.md contains function names and file paths only, no secrets. Excluded from Git. Regenerated via graphify update . after code changes.
+## Telegram Bot Security
+Chat ID whitelist: only authorized user (8047752200) can interact with the bot. Unknown chat_ids receive rejection message. Telegram Bot Token stored in .env via TELEGRAM_BOT_TOKEN variable. API credentials (API_USER, API_PASS) in environment variables, not hardcoded.
+
+## Tool Security
+tool_shell and tool_web require --confirm flag for execution. Without confirmation, user receives warning message. --confirm is stripped from actual command before execution. Playwright browsers isolated in /browsers/ directory within project.
+
 ## Best Practices
 
 Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed paths. Keep Docker sandbox enabled for untrusted code. Rotate API keys periodically. Review worker_prompt.txt before deployment. Use dedicated bot accounts for all integrations.

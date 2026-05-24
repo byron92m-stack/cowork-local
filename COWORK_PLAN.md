@@ -2,24 +2,28 @@
 
 ## Completed Phases
 
-Phase 1-15: Core architecture with LangGraph 5 nodes, Qwen 3 integration, 12 MCP Servers, Docker Sandbox, SSE Streaming, File Watcher, autonomous code generation, security, PostgreSQL 7 tables, plugin system, knowledge base, workspace manager, scheduled tasks, documentation, and CLI integration.
+Phase 1-15: Core architecture with LangGraph, Qwen 3, 12 MCP Servers, Docker Sandbox, SSE Streaming, File Watcher, security, PostgreSQL 7 tables, plugin system, knowledge base, workspace manager, scheduled tasks, documentation, CLI integration.
 
-Phase 16: Unified dual-mode v3.1 with Cowork mode and Code mode, 6-node LangGraph, loop.sh, execute_command.py stdin support, proxy dual-mode detection.
+Phase 16: Unified dual-mode v3.1 with Cowork mode and Code mode, 6-node LangGraph.
 
-Phase 17: Enhanced tools and skills v3.1.1 with write-file 3 modes, search_tools.py, session_memory.py, apply_diff.py, tool_caller.py with 5 format detection at 90 percent, OPENCODE.md as project context, 3 new AI Skills via Qwen3 GPU for test generation, code review, and doc generation, auto_watcher.py for file change detection, Gmail integration for read and send, Telegram integration via @byron92m_bot, Google Calendar integration via email invitations. All tools integrated into LangGraph nodes. 5 tests passing.
+Phase 17: Enhanced tools and skills v3.1.1 with search_tools.py, session_memory.py, apply_diff.py, tool_caller.py, auto_watcher.py, Gmail integration, Telegram integration via @byron92m_bot, Google Calendar integration.
 
-Phase 18: OpenCode CLI integration v3.1.1 replacing Claude Code CLI with OpenCode CLI v1.14.48. Removed Anthropic proxy layer. Direct DeepSeek Cloud connection. Worker upgraded from Qwen3 GPU to DeepSeek V4 Flash with multi-file JSON project generation. Auto-install and auto-tests after generation. System prompt via external worker_prompt.txt file. Support for two JSON response formats.
+Phase 18: OpenCode CLI integration v3.1.1 replacing Claude Code CLI. Direct DeepSeek Cloud connection. Worker upgraded from Qwen3 GPU to DeepSeek V4 Flash.
 
-Phase 19: Multi-agent with OpenCode worker v3.2. Replaced internal worker with OpenCode CLI as execution engine. Planner remains DeepSeek V4 Pro for structured planning. Worker uses OpenCode with DeepSeek V4 Flash FREE model for unlimited free code generation. Surgical fix mode on iterations after first. Auto-fix loop retries up to 5 iterations with accumulated error context. Output directory structure matches OpenCode conventions. Results: six test projects completed with 100 percent test pass rate using FREE model.
+Phase 19: Multi-agent with OpenCode worker v3.2. Planner DeepSeek V4 Pro + Worker Flash FREE. Surgical fix mode. 6 projects 100% tests.
 
-Phase 20: Redis, Graphify, n8n integration. Redis added for fast in-memory state sharing and planner response caching. Graphify maps codebase into 771 nodes, 1145 edges, 42 communities; planner reads GRAPH_REPORT.md automatically. n8n deployed on Docker with native MCP server. Skills installed for workflow generation. Telegram notifications on project completion via n8n webhook. Invoice Bot 24/7 processing emails with DeepSeek extraction and PostgreSQL storage.
+Phase 20: Redis, Graphify, n8n integration. Redis for state sharing and cache. Graphify 771 nodes. n8n with native MCP. Invoice Bot 24/7.
 
-Phase 21: VS Code, opencode-vscode, opencode-mem. VS Code extension via opencode-vscode plugin with chat panel. opencode-mem plugin for persistent vector memory. Claude Code compatible structure with rules/, agents/, hooks/ directories and .mcp.json. PostgreSQL MCP server added for worker access to invoices and sessions.
+Phase 21: VS Code, opencode-vscode, opencode-mem. Claude Code compatible structure (rules/, agents/, hooks/, .mcp.json). PostgreSQL MCP server.
+
+Phase 22: Telegram Assistant v3.2. Multi-session support via Redis (/list, /switch, /nueva, /cerrar, /estado, /pc). Conversation memory between messages. Automatic intent classification via DeepSeek Pro. 5 real tools: tool_filesystem (os.walk), tool_document (pypdf, pandas), tool_web (Playwright), tool_shell (subprocess), code_generation (OpenCode). Chat ID whitelist security.
+
+Phase 23: Generalist planner. DeepSeek Pro classifies intent into 6 types (code_generation, tool_filesystem, tool_document, tool_web, tool_shell, chat). No hardcoded if/else. Worker executes MCPs directly for tool tasks.
+
+Phase 24: Security hardening. Chat ID whitelist (only authorized user). --confirm required for tool_shell and tool_web. Tokens and passwords moved to .env. Rate limiting via Redis. Sensitive files cleaned from repository.
+
+Phase 25: Documentation updated. README, ARCHITECTURE, OPENCODE, COWORK_PLAN, SECURITY, CONTRIBUTING all current with v3.2 features.
 
 ## Current Capabilities v3.2
 
-OpenCode CLI v1.14.48 with cowork and code modes. Multi-agent LangGraph with 5 nodes using DeepSeek V4 Pro planner and OpenCode Flash FREE worker. 16 MCP Servers plus n8n-mcp. Redis for fast state sharing. Graphify for code knowledge graph. n8n for workflow automation. PostgreSQL with 8 tables including invoices. Telegram notifications on every project completion. opencode-vscode for IDE integration. 6 projects with 100% test pass rate. Total cost approximately 0.50 dollars per month.
-
-## Architecture
-
-DeepSeek V4 Pro for planning and review. OpenCode CLI with DeepSeek V4 Flash FREE for code generation. LangGraph 5 nodes for orchestration. Redis for state caching. 16 MCP Servers for tool access. PostgreSQL for persistence. n8n for automation. Graphify for code intelligence. Single interface via OpenCode CLI.
+Telegram assistant (@byron92m_bot) with 5 real tools. Multi-agent LangGraph with DeepSeek V4 Pro planner and Flash FREE worker. 16 MCP Servers. PostgreSQL + Redis. Graphify code intelligence. n8n automation. Playwright web navigation. Multi-session chat with memory. Intent classification without hardcoded rules. Security hardened. Total cost ~$0.50/month.

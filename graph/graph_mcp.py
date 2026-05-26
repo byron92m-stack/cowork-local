@@ -1,14 +1,12 @@
 """Sub-grafo de herramientas MCP (filesystem, document, web, shell, chat)."""
 import logging, subprocess, os, re, asyncio
 import redis as redis_lib
-import httpx
 from langgraph.graph import StateGraph, END
 from .state import CoworkState
 
 logger = logging.getLogger(__name__)
 COWORK_DIR = "/media/SSD1T/cowork-local"
 redis_client = redis_lib.Redis(host='localhost', port=6379, decode_responses=True)
-DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 
@@ -86,6 +84,35 @@ def execute_tool(state: CoworkState) -> dict:
                 result = f"🌐 {url}\nTitulo: {title}\n\n{text[:500]}"
             except Exception as e:
                 result = f"🌐 Error al navegar: {str(e)[:200]}"
+        
+        # ─── EDIT (OpenCode lee el archivo y genera diff) ─
+        elif project_type == "tool_edit":
+            import subprocess as sp, re as _re
+            # Extraer path del archivo del query
+            path_match = _re.search(r'/(?:media|home|tmp)/[^\s]*\.\w+', query)
+            filepath = path_match.group(0) if path_match else None
+            
+            if filepath and os.path.exists(filepath):
+                # Leer el archivo para dar contexto
+                with open(filepath) as f:
+                    content = f.read()[:2000]
+                
+                edit_prompt = f"File: {filepath}\nCurrent content:\n{content}\n\nTask: {query}\n\nEdit the file to fulfill the task. Return ONLY the complete modified file content."
+                cmd_result = sp.run(
+                    ["opencode", "run", "--model", "opencode/deepseek-v4-flash-free", edit_prompt],
+                    capture_output=True, text=True, timeout=120,
+                    cwd=COWORK_DIR,
+                    env={**os.environ, "DEEPSEEK_API_KEY": DEEPSEEK_KEY}
+                )
+                new_content = cmd_result.stdout.strip()
+                if new_content and len(new_content) > 10:
+                    with open(filepath, 'w') as f:
+                        f.write(new_content)
+                    result = f"✏️ Archivo editado: {filepath}"
+                else:
+                    result = "❌ No se pudo generar la nueva versión del archivo"
+            else:
+                result = "📄 Especifica la ruta completa al archivo a editar"
         
         # ─── SHELL ─────────────────────────────────────
         elif project_type == "tool_shell":

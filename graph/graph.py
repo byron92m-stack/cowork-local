@@ -25,6 +25,7 @@ CLASSIFY the intent first:
 - "tool_document": Analyze, modify, or create documents (PDF, Excel)
 - "tool_web": Browse the web, apply to jobs, search
 - "tool_design": Design frontend, landing pages, dashboards, presentations, UI/UX
+- "tool_edit": Edit, modify, append to, or delete existing files
 - "tool_shell": Execute commands or scripts
 - "chat": Answer a question, no action needed
 
@@ -37,6 +38,9 @@ EXAMPLES:
 - "Buscá PDFs" → tool_filesystem (file search)
 - "Analiza documento.pdf" → tool_document (document analysis)
 - "Leé archivo.txt" → tool_document (read file content)
+- "Modificá README.md" → tool_edit (edit existing file)
+- "Agregá una línea a X.py" → tool_edit (modify file)
+- "Eliminá la función Y de Z.py" → tool_edit (delete code)
 - "Revisa el Excel" → tool_document (spreadsheet analysis)
 - "¿Cómo creo un CLI?" → chat (asking for help)
 - "Creá un CLI" → code_generation (building something)
@@ -63,7 +67,7 @@ Output ONLY valid JSON:
 {
   "project_name": "name",
   "project_description": "what to do",
-  "project_type": "code_generation|tool_filesystem|tool_document|tool_web|tool_design|tool_shell|chat",
+  "project_type": "code_generation|tool_filesystem|tool_document|tool_web|tool_design|tool_edit|tool_shell|chat",
   "steps": [{"id":1, "agent":"opencode", "task":"specific action"}]
 }
 CRITICAL: If project_type starts with "tool_" or is "chat", DO NOT create a Python project.

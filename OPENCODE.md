@@ -9,13 +9,13 @@
 LangGraph con sub-grafos independientes por worker:
 - `code_worker` → OpenCode + Flash FREE → proyectos Python
 - `design_worker` → OpenDesign (API) → diseño UI/UX, landing pages, dashboards
-- `mcp_worker` → 5 tools → filesystem, document, web, shell, chat
+- `mcp_worker` → 6 tools → filesystem, document, web, shell, chat, edit
 
 ## Models
 - Planner/Reviewer: deepseek-v4-pro (~$0.001/proyecto)
 - Code worker: opencode/deepseek-v4-flash-free (FREE)
 - Design worker: OpenCode via OpenDesign daemon (FREE)
-- MCP worker: local tools + DeepSeek para chat
+- MCP worker: local tools + OpenCode Flash FREE para chat y edit
 - Local backup: qwen3:14b via Ollama
 
 ## Rules

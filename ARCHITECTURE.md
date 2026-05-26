@@ -6,9 +6,9 @@ Multi-agent system with DeepSeek V4 Pro planner and 3 specialized workers via La
 
 ## Multi-Agent Pipeline
 
-Planner uses DeepSeek V4 Pro to classify user intent into 7 types: code_generation, tool_design, tool_filesystem, tool_document, tool_web, tool_shell, chat. Routes to the correct worker via conditional edges.
+Planner uses DeepSeek V4 Pro to classify user intent into 8 types: code_generation, tool_design, tool_filesystem, tool_document, tool_web, tool_edit, tool_shell, chat. Routes to the correct worker via conditional edges.
 
-Three workers implemented as independent sub-graphs. code_worker uses OpenCode plus Flash FREE to generate Python projects with pytest. design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards. mcp_worker runs 5 local tools: filesystem via os.walk, document via pypdf and pandas, web via Playwright, shell via subprocess, and chat via DeepSeek.
+Three workers implemented as independent sub-graphs. code_worker uses OpenCode plus Flash FREE to generate Python projects with pytest. design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards. mcp_worker runs 6 local tools: filesystem via os.walk, document via pypdf and pandas, web via Playwright, shell via subprocess, and chat via OpenCode + Flash FREE, edit via OpenCode + Flash FREE.
 
 Each worker has its own sub-graph with isolated state. CodeWorkerState for code generation, DesignWorkerState for design tasks. MCP worker shares CoworkState for chat history access.
 
@@ -20,7 +20,7 @@ Main graph in graph.py contains planner, review, and decision nodes. Three sub-g
 
 ## Telegram Assistant
 
-API endpoint /chat/assistant receives messages from Telegram bot polling every 10 seconds. Multi-session via Redis with commands: /list, /switch, /nueva, /cerrar, /estado, /pc, /ayuda. Conversation history stored in Redis with 1 hour TTL. Security: Chat ID whitelist, confirm flag required for shell and web tools.
+API endpoint /chat/assistant receives messages from Telegram bot polling every 10 seconds. Multi-session via Redis with commands: /list, /switch, /nueva, /cerrar, /estado, /pc, /ayuda. Conversation history stored in Redis with 24 hour TTL. Security: Chat ID whitelist, confirm flag required for shell and web tools.
 
 ## Infrastructure
 

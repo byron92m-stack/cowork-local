@@ -1,4 +1,4 @@
-# Cowork-Local v3.2 — Autonomous Multi-Agent Development Assistant
+# Cowork-Local v4.0 — Autonomous Multi-Agent Development Assistant
 
 AI-powered system that generates complete, tested, production-ready Python CLI projects with zero human supervision. Built on LangGraph with DeepSeek V4 Pro planner and 3 specialized workers via sub-graph architecture. Runs locally on Fedora 43 with GPU acceleration.
 

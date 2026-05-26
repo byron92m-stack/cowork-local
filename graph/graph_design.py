@@ -11,6 +11,19 @@ def design_generate(state: DesignWorkerState) -> dict:
     
     try:
         import requests
+        
+        # Healthcheck: verificar que el daemon esté corriendo
+        try:
+            hc = requests.get("http://127.0.0.1:34095/api/health", timeout=2)
+            if not hc.ok:
+                raise Exception("Daemon health check failed")
+        except Exception:
+            return {
+                "reply": "❌ OpenDesign daemon no está corriendo. Inicialo con:\ncd /media/SSD1T/open-design && pnpm tools-dev run web --daemon-port 34095 --web-port 45125",
+                "complete": True,
+                "error": "Daemon offline"
+            }
+        
         resp = requests.post(
             "http://127.0.0.1:34095/api/chat",
             json={

@@ -213,7 +213,7 @@ def decision(state):
         redis_client.rpush(f"chat:{session_id}", f"Usuario: {state.user_query}")
         reply = state.metadata.get("reply", "Tarea completada")
         redis_client.rpush(f"chat:{session_id}", f"Asistente: {reply[:800]}")
-        redis_client.expire(f"chat:{session_id}", 3600)
+        redis_client.expire(f"chat:{session_id}", 86400)
         logger.info("[DECISION] Historial guardado en Redis")
         # Notificar por n8n
         try:
@@ -304,7 +304,7 @@ def get_last_state() -> Optional[dict]:
 def save_last_state(state_dict: dict) -> None:
     """Guarda el último estado en Redis (TTL 1 hora)."""
     try:
-        redis_client.setex("cowork:last_state", 3600, json.dumps(state_dict, default=str))
+        redis_client.setex("cowork:last_state", 86400, json.dumps(state_dict, default=str))
     except:
         pass
 

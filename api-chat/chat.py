@@ -159,7 +159,7 @@ async def send_assistant_message(
             result = run_graph(message_data.content, max_iterations=2)
         
         # Guardar estado para el próximo mensaje
-        redis_client.setex(session_key, 3600, json.dumps(result.model_dump(), default=str))
+        redis_client.setex(session_key, 86400, json.dumps(result.model_dump(), default=str))
         
         reply_content = result.metadata.get("reply", "")
         if not reply_content:

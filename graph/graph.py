@@ -3,7 +3,10 @@ import logging, json, subprocess, os, httpx
 from typing import Optional
 from datetime import datetime
 from langgraph.graph import StateGraph, END
-from .state import CoworkState
+from .state import CoworkState, CodeWorkerState, DesignWorkerState
+from .graph_code import build_code_graph
+from .graph_design import build_design_graph
+from .graph_mcp import build_mcp_graph
 import redis
 
 logger = logging.getLogger(__name__)
@@ -21,6 +24,7 @@ CLASSIFY the intent first:
 - "tool_filesystem": Find, list, count, or search files (includes questions about files, directories, storage)
 - "tool_document": Analyze, modify, or create documents (PDF, Excel)
 - "tool_web": Browse the web, apply to jobs, search
+- "tool_design": Design frontend, landing pages, dashboards, presentations, UI/UX
 - "tool_shell": Execute commands or scripts
 - "chat": Answer a question, no action needed
 
@@ -59,7 +63,7 @@ Output ONLY valid JSON:
 {
   "project_name": "name",
   "project_description": "what to do",
-  "project_type": "code_generation|tool_filesystem|tool_document|tool_web|tool_shell|chat",
+  "project_type": "code_generation|tool_filesystem|tool_document|tool_web|tool_design|tool_shell|chat",
   "steps": [{"id":1, "agent":"opencode", "task":"specific action"}]
 }
 CRITICAL: If project_type starts with "tool_" or is "chat", DO NOT create a Python project.
@@ -74,164 +78,60 @@ def call_deepseek(system, prompt, json_mode=True):
     except Exception as e:
         return '{"error":"%s"}' % str(e)
 
-def call_opencode(task, project_dir):
-    """Llama a OpenCode CLI para generar código."""
-    try:
-        prompt = f"Create {task}. Write files in {project_dir}. Return JSON with files array."
-        result = subprocess.run(
-            ["opencode", "run", "--model", "opencode/deepseek-v4-flash-free", prompt],
-            capture_output=True, text=True, timeout=1800,
-            cwd=COWORK_DIR,
-            env={**os.environ, "DEEPSEEK_API_KEY": DEEPSEEK_KEY}
-        )
-        return result.stdout
-    except subprocess.TimeoutExpired:
-        return "TIMEOUT"
-    except Exception as e:
-        return f"ERROR: {e}"
-
-def run_pytest(project_dir):
-    try:
-        subprocess.run(f"cd {project_dir} && pip install -e . 2>&1 | tail -2", shell=True, capture_output=True, text=True, timeout=180)
-        # Buscar tests en tests/ o en raíz
-        has_tests_dir = os.path.isdir(os.path.join(project_dir, "tests"))
-        has_pyproject = os.path.isfile(os.path.join(project_dir, "pyproject.toml"))
-        if has_pyproject:
-            r = subprocess.run(f"cd {project_dir} && python -m pytest -v 2>&1", shell=True, capture_output=True, text=True, timeout=180)
-        elif has_tests_dir:
-            r = subprocess.run(f"cd {project_dir} && python -m pytest tests/ -v 2>&1", shell=True, capture_output=True, text=True, timeout=180)
-        else:
-            r = subprocess.run(f"cd {project_dir} && python -m pytest -v 2>&1", shell=True, capture_output=True, text=True, timeout=180)
-        return r.stdout + r.stderr
-    except Exception as e:
-        return f"ERROR: {e}"
 
 
-def execute_mcp_tool(project_type: str, query: str, state) -> str:
-    """Ejecuta la herramienta MCP correspondiente según el tipo de tarea."""
-    result = ""
+def mcp_wrapper(state: CoworkState) -> dict:
+    """Wrapper que ejecuta el sub-grafo MCP y mapea resultados."""
+    result = build_mcp_graph().invoke(state)
+    return {
+        "reply": result.get("reply", "Tarea completada"),
+        "metadata": {
+            **state.metadata,
+            "tests_passed": result.get("tests_passed", 1),
+            "tests_failed": result.get("tests_failed", 0),
+            "complete": result.get("complete", True)
+        },
+        "artifacts": [{"type": "log", "content": result.get("reply", "")}]
+    }
+
+
+def code_wrapper(state: CoworkState) -> dict:
+    """Wrapper que ejecuta el sub-grafo y mapea resultados."""
+    # Ejecutar sub-grafo
+    code_state = CodeWorkerState(
+        query=state.user_query,
+        project_name=state.metadata.get("project_name", "project")
+    )
+    result = build_code_graph().invoke(code_state)
     
-    try:
-        if project_type == "tool_filesystem":
-            import re, os
-            # Extraer path del query
-            path_match = re.search(r'/(?:media|home|tmp)/[^\s]*', query)
-            path = path_match.group(0) if path_match else "/media/SSD1T/"
-            ext_match = re.search(r'\.(\w+)', query)
-            pattern = ext_match.group(1) if ext_match else None
-            
-            # Buscar archivos con os.walk (sin depender del MCP)
-            found = []
-            for root, dirs, files in os.walk(path):
-                for f in files:
-                    if pattern is None or f.endswith('.' + pattern):
-                        found.append(os.path.join(root, f))
-                if len(found) > 50:
-                    break
-            result = "📁 Archivos encontrados en " + path + ":\n" + "\n".join(found[:20])
-            if not found:
-                result = "📁 No se encontraron archivos" + (f" .{pattern}" if pattern else "") + " en " + path
-        
-        elif project_type == "tool_document":
-            import os
-            import re
-            path_match = re.search(r'/(?:media|home|tmp)/[^\s]*\.\w+', query)
-            filepath = path_match.group(0) if path_match else None
-            
-            if filepath and os.path.exists(filepath):
-                ext = filepath.split('.')[-1].lower()
-                try:
-                    if ext == 'pdf':
-                        from pypdf import PdfReader
-                        reader = PdfReader(filepath)
-                        text = "\n".join([p.extract_text() or '' for p in reader.pages[:5]])
-                        result = f"📄 PDF: {filepath}\nPaginas: {len(reader.pages)}\n\n{text[:1000]}"
-                    elif ext in ('xlsx', 'xls'):
-                        import pandas as pd
-                        df = pd.read_excel(filepath)
-                        result = f"📊 Excel: {filepath}\nFilas: {len(df)}\nColumnas: {list(df.columns)}\n\n{df.head(10).to_string()}"
-                    elif ext in ('csv', 'txt', 'md', 'py', 'json', 'log'):
-                        with open(filepath) as f:
-                            text = f.read()
-                        result = f"📝 Archivo: {filepath}\n{text[:1000]}"
-                    else:
-                        result = f"📁 Archivo no soportado: {filepath} (.{ext})"
-                except Exception as e:
-                    result = f"📄 Error al leer {filepath}: {str(e)[:200]}"
-            else:
-                result = "📄 Por favor especifica la ruta completa al archivo. Ej: 'Analiza /media/SSD1T/documento.pdf'"
-        elif project_type == "tool_web":
-            import os
-            import re, asyncio
-            os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', '/media/SSD1T/cowork-local/browsers')
-            
-            url_match = re.search(r'https?://[^\s]+', query)
-            url = url_match.group(0) if url_match else "https://www.google.com"
-            
-            try:
-                async def _browse():
-                    from playwright.async_api import async_playwright
-                    async with async_playwright() as p:
-                        browser = await p.chromium.launch(headless=True)
-                        page = await browser.new_page()
-                        await page.goto(url, timeout=15000)
-                        title = await page.title()
-                        text = await page.inner_text('body')
-                        await browser.close()
-                        return title, text[:1000]
-                
-                title, text = asyncio.run(_browse())
-                result = f"🌐 {url}\nTitulo: {title}\n\n{text[:500]}"
-            except Exception as e:
-                result = f"🌐 Error al navegar: {str(e)[:200]}"
-        elif project_type == "tool_shell":
-            import subprocess
-            # Extraer comando del query (case insensitive)
-            qlower = query.lower()
-            if "ejecutá" in qlower or "ejecuta" in qlower or "ejecutar" in qlower:
-                for w in ["ejecutá", "ejecuta", "ejecutar"]:
-                    if w in qlower:
-                        cmd = query.lower().split(w, 1)[-1].strip()
-                        break
-            elif "corré" in qlower or "corre" in qlower or "correr" in qlower:
-                for w in ["corré", "corre", "correr"]:
-                    if w in qlower:
-                        cmd = query.lower().split(w, 1)[-1].strip()
-                        break
-            elif "run " in qlower:
-                cmd = query.lower().split("run ", 1)[-1].strip()
-            else:
-                cmd = query
-            # Limpiar --confirm del comando
-            cmd = cmd.replace(" --confirm", "").replace("--confirm", "").strip()
-            output = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
-            result = "💻 Comando ejecutado:\n" + (output.stdout or output.stderr)[:500]
-        
-        elif project_type == "chat":
-            # Si hay historial, usar DeepSeek para respuesta contextual
-            session_id = state.session_id
-            history = redis_client.lrange(f"chat:{session_id}", 0, -1)
-            if history and len(history) >= 2:
-                # Usar DeepSeek para responder basándose en el historial
-                context = "\n".join(history[-6:])
-                response = call_deepseek(
-                    "You are a helpful assistant. Answer the user based on the conversation history. Be concise and specific. If the history has file search results, reference them directly.",
-                    f"History:\n{context}\n\nUser: {state.user_query}\n\nAnswer:",
-                    json_mode=False
-                )
-                result = response
-            else:
-                result = "¡Hola! Soy tu asistente Cowork. Puedo:\n• Buscar archivos en tu PC\n• Crear proyectos Python\n• Analizar documentos\n• Ejecutar comandos\n• Navegar internet\n\n¿En qué te ayudo?"
-        
-        else:
-            result = "Tarea ejecutada: " + query[:100] + "..."
-        
-        state.add_artifact("log", result)
-        return result
+    return {
+        "metadata": {
+            **state.metadata,
+            "reply": result["reply"],
+            "tests_passed": result.get("tests_passed", 0),
+            "tests_failed": result.get("tests_failed", 0),
+            "complete": result.get("complete", False)
+        },
+        "artifacts": [{"type": "log", "content": result["reply"]}]
+    }
+
+
+def design_wrapper(state: CoworkState) -> dict:
+    """Wrapper que ejecuta el sub-grafo de diseño y mapea resultados."""
+    design_state = DesignWorkerState(
+        query=state.user_query
+    )
+    result = build_design_graph().invoke(design_state)
     
-    except Exception as e:
-        logger.error(f"MCP tool error: {e}")
-        return "❌ Error al ejecutar herramienta: " + str(e)[:200]
+    return {
+        "metadata": {
+            **state.metadata,
+            "reply": result["reply"],
+            "complete": result.get("complete", False)
+        },
+        "artifacts": [{"type": "log", "content": result["reply"]}]
+    }
+
 
 def task_intake(state): return state.model_dump()
 
@@ -289,85 +189,6 @@ def planner(state):
     state.iteration_count += 1
     return state.model_dump()
 
-def worker_opencode(state):
-    global COWORK_DIR
-    logger.info("[WORKER] Executing...")
-    project_name = state.metadata.get("project_name","project")
-    project_type = state.metadata.get("project_type", "code_generation")
-    description = state.metadata.get("project_description", state.user_query)
-    
-    # Si es tarea de herramienta o chat, usar MCPs directo
-    if project_type.startswith("tool_") or project_type == "chat":
-        # SEGURIDAD NIVEL 2: tool_shell y tool_web requieren --confirm
-        dangerous = project_type in ("tool_shell", "tool_web")
-        if dangerous and "--confirm" not in state.user_query.lower():
-            result_text = "⚠️ Esta acción puede modificar tu sistema. Para confirmar, volvé a escribir el mensaje agregando '--confirm' al final.\n\nEjemplo: 'Ejecuta ls -la --confirm'"
-            state.add_artifact("log", result_text[:1000])
-            state.metadata["tests_passed"] = 1
-            state.metadata["tests_failed"] = 0
-            state.metadata["complete"] = True
-            state.metadata["reply"] = result_text
-            for step in state.plan: step.status = "done"
-            return state.model_dump()
-        
-        logger.info(f"[WORKER] Using MCP tool for: {project_type}")
-        result_text = execute_mcp_tool(project_type, state.user_query, state)
-        state.add_artifact("log", result_text[:1000])
-        state.metadata["tests_passed"] = 1
-        state.metadata["tests_failed"] = 0
-        state.metadata["complete"] = True
-        state.metadata["reply"] = result_text  # Guardar respuesta real
-        for step in state.plan: step.status = "done"
-        return state.model_dump()
-    
-    # Si es generación de código, usar OpenCode
-    project_dir = os.path.join(COWORK_DIR, project_name)
-    os.makedirs(project_dir, exist_ok=True)
-    
-    if project_type in ("json_file", "documentation", "other", "library"):
-        full_prompt = f"{description}. Return JSON with files array. Do NOT create a Python project. Do NOT create cli.py or core.py. Do NOT add tests."
-        state.metadata["complete"] = True
-        state.metadata["tests_passed"] = 0
-        state.metadata["tests_failed"] = 0
-        logger.info(f"[WORKER] {project_type} mode - skipping pytest")
-        output = call_opencode(full_prompt, project_dir)
-        state.add_artifact("log", output[:1000])
-        for step in state.plan: step.status = "done"
-        return state.model_dump()
-    else:
-        files_list = state.metadata.get("files", [])
-        files_str = ", ".join(files_list[:8]) if files_list else "appropriate files"
-        flags = state.metadata.get("flags","[]")
-        full_prompt = f"Create a Python {project_type} project called '{project_name}'. {description}. Project type: {project_type}. Required files: {files_str}. Flags: {flags}. Return JSON with files array."
-    
-    output = call_opencode(full_prompt, project_dir)
-    state.add_artifact("log", output[:1000])
-    
-    test_output = run_pytest(project_dir)
-    passed = test_output.count("PASSED")
-    failed = test_output.count("FAILED")
-    state.metadata["tests_passed"] = passed
-    state.metadata["tests_failed"] = failed
-    state.metadata["last_project_dir"] = project_dir
-    state.add_artifact("log", test_output[:1000])
-    
-    if failed > 0:
-        import re
-        for match in re.finditer(r'FAILED (tests/\S+) - (.+)', test_output):
-            redis_client.rpush(f"failures:{project_name}", f"{match.group(1)}: {match.group(2)[:150]}")
-        redis_client.expire(f"failures:{project_name}", 600)
-    
-    for step in state.plan: step.status = "done"
-    if failed > 0:
-        state.add_error(f"{failed} tests failed, {passed} passed")
-        state.metadata["complete"] = False
-    else:
-        state.metadata["complete"] = True
-        redis_client.delete(f"failures:{project_name}")
-    
-    logger.info(f"[WORKER] {passed} passed, {failed} failed -> {project_dir}")
-    return state.model_dump()
-def validation(state): return state.model_dump()
 
 def review(state):
     logger.info("[REVIEW]")
@@ -416,17 +237,39 @@ def decision(state):
     return "planner"
 
 def build_graph():
+    """Grafo principal con sub-grafos para cada worker."""
     workflow = StateGraph(CoworkState)
-    for name, fn in [("intake",task_intake),("planner",planner),("worker",worker_opencode),("validation",validation),("review",review)]:
-        workflow.add_node(name, fn)
+    
+    workflow.add_node("intake", task_intake)
+    workflow.add_node("planner", planner)
+    workflow.add_node("code_worker", code_wrapper)
+    workflow.add_node("design_worker", design_wrapper)
+    workflow.add_node("mcp_worker", mcp_wrapper)
+    workflow.add_node("review", review)
+    
     workflow.set_entry_point("intake")
-    workflow.add_edge("intake","planner")
-    workflow.add_edge("planner","worker")
-    workflow.add_edge("worker","validation")
-    workflow.add_edge("validation","review")
-    workflow.add_conditional_edges("review", decision, {"planner":"planner",END:END})
+    workflow.add_edge("intake", "planner")
+    
+    def route_to_worker(state: CoworkState) -> str:
+        pt = state.metadata.get("project_type", "code_generation")
+        if pt == "tool_design":
+            return "design_worker"
+        elif pt.startswith("tool_") or pt == "chat":
+            return "mcp_worker"
+        else:
+            return "code_worker"
+    
+    workflow.add_conditional_edges(
+        "planner", route_to_worker,
+        {"code_worker": "code_worker", "design_worker": "design_worker", "mcp_worker": "mcp_worker"}
+    )
+    
+    workflow.add_edge("code_worker", "review")
+    workflow.add_edge("design_worker", "review")
+    workflow.add_edge("mcp_worker", "review")
+    workflow.add_conditional_edges("review", decision, {"planner": "planner", END: END})
+    
     return workflow.compile()
-
 def run_graph(user_query, project_path=COWORK_DIR, max_iterations=5):
     state = CoworkState(user_query=user_query, project_path=project_path, max_iterations=max_iterations)
     graph = build_graph()

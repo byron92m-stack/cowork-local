@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user
@@ -94,6 +94,31 @@ async def _call_deepseek(system_prompt: str, user_message: str) -> str:
             return r.json()["choices"][0]["message"]["content"]
     except Exception:
         return _generate_reply(user_message)
+
+
+
+@router.post("/invoice-webhook")
+async def receive_invoice(request: Request):
+    """Recibe facturas desde Mailgun y las procesa con Cowork."""
+    try:
+        form = await request.form()
+        sender = form.get("from", "")
+        subject = form.get("subject", "")
+        body_text = form.get("body-plain", "")
+        
+        # Extraer adjuntos
+        attachments = []
+        for field_name in form.keys():
+            if field_name.startswith("attachment-"):
+                attachment = form[field_name]
+                if hasattr(attachment, 'filename') and attachment.filename:
+                    attachments.append(attachment.filename)
+        
+        reply = f"📧 Factura recibida:\nDe: {sender}\nAsunto: {subject}\nAdjuntos: {', '.join(attachments) if attachments else 'ninguno'}"
+        
+        return {"status": "ok", "message": reply}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/assistant", response_model=ChatResponse)

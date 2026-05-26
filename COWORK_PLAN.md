@@ -10,20 +10,22 @@ Phase 17: Enhanced tools and skills v3.1.1 with search_tools.py, session_memory.
 
 Phase 18: OpenCode CLI integration v3.1.1 replacing Claude Code CLI. Direct DeepSeek Cloud connection. Worker upgraded from Qwen3 GPU to DeepSeek V4 Flash.
 
-Phase 19: Multi-agent with OpenCode worker v3.2. Planner DeepSeek V4 Pro + Worker Flash FREE. Surgical fix mode. 6 projects 100% tests.
+Phase 19: Multi-agent with OpenCode worker v3.2. Planner DeepSeek V4 Pro plus Worker Flash FREE. Surgical fix mode. 6 projects 100 percent tests.
 
 Phase 20: Redis, Graphify, n8n integration. Redis for state sharing and cache. Graphify 771 nodes. n8n with native MCP. Invoice Bot 24/7.
 
-Phase 21: VS Code, opencode-vscode, opencode-mem. Claude Code compatible structure (rules/, agents/, hooks/, .mcp.json). PostgreSQL MCP server.
+Phase 21: VS Code, opencode-vscode, opencode-mem. Claude Code compatible structure with rules, agents, hooks, .mcp.json. PostgreSQL MCP server.
 
-Phase 22: Telegram Assistant v3.2. Multi-session support via Redis (/list, /switch, /nueva, /cerrar, /estado, /pc). Conversation memory between messages. Automatic intent classification via DeepSeek Pro. 5 real tools: tool_filesystem (os.walk), tool_document (pypdf, pandas), tool_web (Playwright), tool_shell (subprocess), code_generation (OpenCode). Chat ID whitelist security.
+Phase 22: Telegram Assistant v3.2. Multi-session support via Redis with /list, /switch, /nueva, /cerrar, /estado, /pc. Conversation memory between messages. Automatic intent classification via DeepSeek Pro. 5 real tools: tool_filesystem via os.walk, tool_document via pypdf and pandas, tool_web via Playwright, tool_shell via subprocess, code_generation via OpenCode. Chat ID whitelist security.
 
-Phase 23: Generalist planner. DeepSeek Pro classifies intent into 6 types (code_generation, tool_filesystem, tool_document, tool_web, tool_shell, chat). No hardcoded if/else. Worker executes MCPs directly for tool tasks.
+Phase 23: Generalist planner. DeepSeek Pro classifies intent into 7 types. No hardcoded if/else. Worker executes MCPs directly for tool tasks.
 
-Phase 24: Security hardening. Chat ID whitelist (only authorized user). --confirm required for tool_shell and tool_web. Tokens and passwords moved to .env. Rate limiting via Redis. Sensitive files cleaned from repository.
+Phase 24: Security hardening. Chat ID whitelist, confirm flag required for tool_shell and tool_web. Tokens and passwords moved to .env. Rate limiting via Redis. Sensitive files cleaned.
 
-Phase 25: Documentation updated. README, ARCHITECTURE, OPENCODE, COWORK_PLAN, SECURITY, CONTRIBUTING all current with v3.2 features.
+Phase 25: Documentation updated for v3.2 features.
+
+Phase 26: Multi-worker sub-graph architecture. Migrated from single monolithic worker to 3 independent sub-graphs: graph_code.py with CodeWorkerState for OpenCode generation, graph_design.py with DesignWorkerState for OpenDesign UI/UX, graph_mcp.py with CoworkState for 5 local tools. Main graph in graph.py routes via conditional edges. Legacy worker_opencode, execute_mcp_tool, validation functions removed. State definitions in state.py: CoworkState, CodeWorkerState, DesignWorkerState.
 
 ## Current Capabilities v3.2
 
-Telegram assistant (@byron92m_bot) with 5 real tools. Multi-agent LangGraph with DeepSeek V4 Pro planner and Flash FREE worker. 16 MCP Servers. PostgreSQL + Redis. Graphify code intelligence. n8n automation. Playwright web navigation. Multi-session chat with memory. Intent classification without hardcoded rules. Security hardened. Total cost ~$0.50/month.
+Telegram assistant at @byron92m_bot with 5 real tools accessible through natural language. Multi-agent LangGraph with DeepSeek V4 Pro planner and 3 specialized workers via sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis. Graphify code intelligence. n8n automation. Playwright web navigation. Multi-session chat with memory. Intent classification without hardcoded rules. Security hardened. Total cost approximately 0.50 dollars per month.

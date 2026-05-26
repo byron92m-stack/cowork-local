@@ -40,6 +40,12 @@ Graphify output stored in graphify-out/ directory. GRAPH_REPORT.md contains func
 Chat ID whitelist: only authorized user (8047752200) can interact with the bot. Unknown chat_ids receive rejection message. Telegram Bot Token stored in .env via TELEGRAM_BOT_TOKEN variable. API credentials (API_USER, API_PASS) in environment variables, not hardcoded.
 
 ## Tool Security
+## Sub-Graph Security
+Each worker runs in its own isolated sub-graph with independent state. code_worker uses CodeWorkerState, design_worker uses DesignWorkerState, mcp_worker shares CoworkState. Sub-graphs cannot access each other state. OpenDesign daemon runs on fixed port 34095 bound to localhost only.
+
+## OpenDesign Security
+OpenDesign daemon auto-detects coding agents on PATH. Only connects to localhost. API key passed via environment variable, not stored in OpenDesign config. Design artifacts stored in .od/projects/ directory, gitignored.
+
 tool_shell and tool_web require --confirm flag for execution. Without confirmation, user receives warning message. --confirm is stripped from actual command before execution. Playwright browsers isolated in /browsers/ directory within project.
 
 ## Best Practices
@@ -48,4 +54,4 @@ Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed pa
 
 ## Supported Versions
 
-Version 3.2 with multi-agent OpenCode worker.
+Version 3.2 with 3 workers via sub-graph architecture.

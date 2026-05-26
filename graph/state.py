@@ -87,9 +87,16 @@ class CoworkState(BaseModel):
         description="Información del proyecto actual (archivos, estructura)"
     )
     
+    # Resultados
+    reply: str = Field(default="", description="Respuesta del worker")
+    
     # Metadata
     metadata: Dict[str, Any] = Field(default_factory=dict)
     
+    # Resultados de sub-workers
+    code_result: Dict[str, Any] = Field(default_factory=dict)
+    design_result: Dict[str, Any] = Field(default_factory=dict)
+
     class Config:
         arbitrary_types_allowed = True
 
@@ -153,3 +160,32 @@ class CoworkState(BaseModel):
             f"Errors: {len(self.errors)} | "
             f"Iteration: {self.iteration_count}/{self.max_iterations}"
         )
+
+# ─── Estado del Worker de Código (OpenCode) ────────────────────────
+class CodeWorkerState(BaseModel):
+    """Estado aislado para el worker de generación de código."""
+    query: str = ""
+    project_name: str = "project"
+    project_dir: str = ""
+    tests_passed: int = 0
+    tests_failed: int = 0
+    reply: str = ""
+    complete: bool = False
+    error: str = ""
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+
+# ─── Estado del Worker de Diseño (OpenDesign) ──────────────────────
+class DesignWorkerState(BaseModel):
+    """Estado aislado para el worker de diseño."""
+    query: str = ""
+    skill: str = "web-prototype"
+    design_system: str = "vercel"
+    reply: str = ""
+    complete: bool = False
+    error: str = ""
+    
+    class Config:
+        arbitrary_types_allowed = True

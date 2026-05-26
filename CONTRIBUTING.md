@@ -1,6 +1,6 @@
 # Contributing to Cowork-Local v3.2
 
-Multi-agent development assistant with DeepSeek V4 Pro planner and OpenCode Flash FREE worker. LangGraph 5-node orchestrator. 16 MCP Servers. PostgreSQL memory. 6 projects 100% tests.
+Multi-agent development assistant with DeepSeek V4 Pro planner and 3 specialized workers via LangGraph sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis. 6 projects 100 percent tests.
 
 ## Development Setup
 
@@ -21,23 +21,19 @@ Python 3.12 plus with venv. Node.js 22 plus with npm. Docker and Docker Compose.
 
 ## Architecture Guidelines
 
-Adding a Graph Node: Add function to graph/graph.py. Register with workflow.add_node. Update routing logic. Update state.py if needed.
+Adding a Worker Sub-Graph: Create graph/graph_new.py with build function returning compiled graph. Define state class in graph/state.py. Add wrapper function in graph/graph.py that invokes the sub-graph and maps results to CoworkState. Register worker node in build_graph and add routing in route_to_worker.
 
 Adding an MCP Server: Create tools/mcp/name/server.py. Implement call_tool. Register in tools/mcp_client.py. Add security rules to config/settings.yaml.
 
-Adding a Skill: Add tool definition to tools/mcp/skills/server.py. Implement handler. Add package to requirements.txt. Update OPENCODE.md.
+Adding a Tool to mcp_worker: Add elif block in execute_tool in graph/graph_mcp.py. Add classification example in PLANNER_SYSTEM. Add type to project_type list. Update OPENCODE.md.
 
-Adding a CLI Tool: Create script in apps/cli. Integrate into LangGraph node if needed. Update OPENCODE.md.
+Adding an n8n Workflow: Create JSON via Cowork. Import via n8n API or UI on port 5678. Configure credentials in n8n UI. Activate toggle.
+
+Updating Graphify: Run graphify update . after significant code changes. Commit updated graphify-out/GRAPH_REPORT.md. Planner reads it automatically.
 
 ## Code Style
 
 PEP 8. 4 spaces indentation. Max 100 chars per line. Type hints on public functions. Google-style docstrings.
-
-Adding an n8n Workflow: Create JSON via Cowork (python apps/cli/cowork_graph.py "task"). Import via n8n API or UI on port 5678. Configure credentials in n8n UI. Activate toggle.
-
-Adding a Tool: Add elif block in execute_mcp_tool() in graph/graph.py. Add classification example in PLANNER_SYSTEM. Add type to project_type list. Update OPENCODE.md tools section.
-
-Updating Graphify: Run graphify update . after significant code changes. Commit updated graphify-out/GRAPH_REPORT.md. Planner reads it automatically.
 
 ## Pull Request Process
 

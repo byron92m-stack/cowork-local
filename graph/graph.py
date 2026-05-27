@@ -20,11 +20,11 @@ redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
 PLANNER_SYSTEM = """You are an AI assistant that executes tasks. Read the request and decide the BEST way.
 
 CLASSIFY the intent first:
-- "code_generation": Create a new Python project/CLI/API/library
+- "code_generation": Create a new Python project, CLI, API, library, or data dashboard (Streamlit, Plotly, data apps)
 - "tool_filesystem": Find, list, count, or search files (includes questions about files, directories, storage)
 - "tool_document": Analyze, modify, or create documents (PDF, Excel)
 - "tool_web": Browse the web, apply to jobs, search
-- "tool_design": Design frontend, landing pages, dashboards, presentations, UI/UX
+- "tool_design": Design frontend, landing pages, presentations, UI/UX, visual design, HTML/CSS prototypes (NOT for Streamlit or code-heavy dashboards)
 - "tool_edit": Edit, modify, append to, or delete existing files
 - "tool_shell": Execute commands or scripts
 - "chat": Answer a question, no action needed
@@ -44,6 +44,8 @@ EXAMPLES:
 - "Revisa el Excel" → tool_document (spreadsheet analysis)
 - "¿Cómo creo un CLI?" → chat (asking for help)
 - "Creá un CLI" → code_generation (building something)
+- "Creá un dashboard de Bitcoin" → code_generation (data dashboard = Python project)
+- "Haceme un panel de datos" → code_generation (data app = code)
 - "Hola" → chat (greeting)
 - "¿Qué podés hacer?" → chat (capability question)
 - "De esos, ¿cuántos hay?" → chat (user refers to PREVIOUS results in history)
@@ -109,9 +111,9 @@ def code_wrapper(state: CoworkState) -> dict:
     result = build_code_graph().invoke(code_state)
     
     return {
+        "reply": result["reply"],
         "metadata": {
             **state.metadata,
-            "reply": result["reply"],
             "tests_passed": result.get("tests_passed", 0),
             "tests_failed": result.get("tests_failed", 0),
             "complete": result.get("complete", False)
@@ -128,9 +130,9 @@ def design_wrapper(state: CoworkState) -> dict:
     result = build_design_graph().invoke(design_state)
     
     return {
+        "reply": result["reply"],
         "metadata": {
             **state.metadata,
-            "reply": result["reply"],
             "complete": result.get("complete", False)
         },
         "artifacts": [{"type": "log", "content": result["reply"]}]

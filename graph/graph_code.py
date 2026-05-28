@@ -10,7 +10,7 @@ def code_generate(state: CodeWorkerState) -> dict:
     """Genera código con OpenCode."""
     logger.info(f"[CODE] Generating: {state.query[:80]}...")
     
-    project_dir = os.path.join(COWORK_DIR, state.project_name)
+    project_dir = os.path.join(COWORK_DIR, "output", "projects", state.project_name)
     os.makedirs(project_dir, exist_ok=True)
     
     try:

@@ -103,9 +103,14 @@ def mcp_wrapper(state: CoworkState) -> dict:
 
 def code_wrapper(state: CoworkState) -> dict:
     """Wrapper que ejecuta el sub-grafo y mapea resultados."""
+    # Si hay contenido extraído (ej. de PDF), añadirlo al query
+    augmented_query = state.user_query
+    if state.reply and len(state.reply) > 100:
+        augmented_query = f"{state.user_query}\n\nCONTENIDO DEL PDF:\n{state.reply}"
+    
     # Ejecutar sub-grafo
     code_state = CodeWorkerState(
-        query=state.user_query,
+        query=augmented_query,
         project_name=state.metadata.get("project_name", "project")
     )
     result = build_code_graph().invoke(code_state)

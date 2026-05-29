@@ -38,16 +38,22 @@ def execute_tool(state: CoworkState) -> dict:
         
         # ─── DOCUMENT ──────────────────────────────────
         elif project_type == "tool_document":
-            path_match = re.search(r'/(?:media|home|tmp)/[^\s]*\.\w+', query)
-            filepath = path_match.group(0) if path_match else None
+            # PRIORIDAD 1: Usar project_path del estado
+            filepath = state.project_path if state.project_path and os.path.exists(state.project_path) else None
+            
+            # PRIORIDAD 2: Buscar en el query (comportamiento original)
+            if not filepath:
+                # Buscar rutas que empiecen con /media, /home, /tmp
+                path_match = re.search(r'/(?:media|home|tmp)/[^\s]+\.\w+', query)
+                filepath = path_match.group(0) if path_match else None
             
             if filepath and os.path.exists(filepath):
                 ext = filepath.split('.')[-1].lower()
                 if ext == 'pdf':
                     from pypdf import PdfReader
                     reader = PdfReader(filepath)
-                    text = "\n".join([p.extract_text() or '' for p in reader.pages[:5]])
-                    result = f"📄 PDF: {filepath}\nPaginas: {len(reader.pages)}\n\n{text[:1000]}"
+                    text = "\n".join([p.extract_text() or '' for p in reader.pages])
+                    result = f"📄 PDF: {filepath}\nPaginas: {len(reader.pages)}\n\n{text}"
                 elif ext in ('xlsx', 'xls'):
                     import pandas as pd
                     df = pd.read_excel(filepath)
@@ -55,45 +61,18 @@ def execute_tool(state: CoworkState) -> dict:
                 elif ext in ('csv', 'txt', 'md', 'py', 'json', 'log'):
                     with open(filepath) as f:
                         text = f.read()
-                    result = f"📝 Archivo: {filepath}\n{text[:1000]}"
+                    result = f"📝 Archivo: {filepath}\n{text}"
                 else:
                     result = f"📁 Archivo no soportado: {filepath} (.{ext})"
             else:
                 result = "📄 Especifica la ruta completa al archivo."
         
-        # ─── WEB ───────────────────────────────────────
-        elif project_type == "tool_web":
-            url_match = re.search(r'https?://[^\s]+', query)
-            url = url_match.group(0) if url_match else "https://www.google.com"
-            
-            try:
-                os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', '/media/SSD1T/cowork-local/browsers')
-                from playwright.async_api import async_playwright
-                
-                async def _browse():
-                    async with async_playwright() as p:
-                        browser = await p.chromium.launch(headless=True)
-                        page = await browser.new_page()
-                        await page.goto(url, timeout=15000)
-                        title = await page.title()
-                        text = await page.inner_text('body')
-                        await browser.close()
-                        return title, text[:1000]
-                
-                title, text = asyncio.run(_browse())
-                result = f"🌐 {url}\nTitulo: {title}\n\n{text[:500]}"
-            except Exception as e:
-                result = f"🌐 Error al navegar: {str(e)[:200]}"
-        
-        # ─── EDIT (OpenCode lee el archivo y genera diff) ─
         elif project_type == "tool_edit":
             import subprocess as sp, re as _re
-            # Extraer path del archivo del query
             path_match = _re.search(r'/(?:media|home|tmp)/[^\s]*\.\w+', query)
             filepath = path_match.group(0) if path_match else None
             
             if filepath and os.path.exists(filepath):
-                # Leer el archivo para dar contexto
                 with open(filepath) as f:
                     content = f.read()[:2000]
                 
@@ -134,7 +113,8 @@ def execute_tool(state: CoworkState) -> dict:
             history = redis_client.lrange(f"chat:{session_id}", 0, -1)
             if history and len(history) >= 2:
                 context = "\n".join(history[-6:])
-                r = httpx.post(DEEPSEEK_URL, json={
+                import httpx
+                r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={
                     "model": "deepseek-chat",
                     "messages": [
                         {"role": "system", "content": "You are a helpful assistant. Answer based on conversation history."},

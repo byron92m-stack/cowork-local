@@ -17,7 +17,7 @@ npm install -g opencode-ai && opencode plugin opencode-vscode -g
 
 ## Prerequisites
 
-Python 3.12 plus with venv. Node.js 22 plus with npm. Docker and Docker Compose. Ollama with qwen3:14b as backup worker. DeepSeek API key. Git. OpenCode CLI installed globally.
+Python 3.13 plus with venv. Node.js 22 plus with npm. Docker and Docker Compose. Ollama with qwen3:14b as backup worker. DeepSeek API key. Git. OpenCode CLI installed globally.
 
 ## Architecture Guidelines
 
@@ -26,6 +26,10 @@ Adding a Worker Sub-Graph: Create graph/graph_new.py with build function returni
 Adding an MCP Server: Create tools/mcp/name/server.py. Implement call_tool. Register in tools/mcp_client.py. Add security rules to config/settings.yaml.
 
 Adding a Tool to mcp_worker: Add elif block in execute_tool in graph/graph_mcp.py. Add classification example in PLANNER_SYSTEM. Add type to project_type list. Update OPENCODE.md.
+
+Fixing PDF Processing: Ensure tool_document uses state.project_path as priority. Remove limits on pages (reader.pages not reader.pages[:5]). Remove limits on text (remove [:1000]). For long content, save to file and reference path.
+
+Fixing Code Generation: Prompt must request JSON format. clean_code() must handle JSON responses, markdown blocks, and remove non-ASCII characters. Scripts must be saved AND executed automatically via subprocess.run.
 
 Adding an n8n Workflow: Create JSON via Cowork. Import via n8n API or UI on port 5678. Configure credentials in n8n UI. Activate toggle.
 

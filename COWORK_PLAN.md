@@ -28,6 +28,14 @@ Phase 26: Multi-worker sub-graph architecture. 3 independent sub-graphs: graph_c
 
 Phase 27: tool_edit with OpenCode context-aware editing. Reads file content, generates diff with Flash FREE, applies changes. tool_edit added to PLANNER_SYSTEM as 8th intent type. Chat migrated from DeepSeek Pro API to OpenCode Flash FREE.
 
+Phase 28: PDF Processing fixes. tool_document now prioritizes state.project_path over user_query. Extracts all pages (removed limit of 5). Extracts all text (removed limit of 1000 chars). Supports long content via file saving.
+
+Phase 29: Code Generation fixes. Prompt now requests JSON format. clean_code() handles JSON responses, markdown blocks, and removes non-ASCII characters (em dash, smart quotes). Scripts are saved AND executed automatically. Output captured and returned.
+
+Phase 30: PowerPoint generation working. 14 slides with logical structure. Full PDF content preserved. Supports both generic and template-based presentations. Automatic verification of results.
+
+Phase 31: OpenCode.md and README.md updated with new capabilities.
+
 ## Current Capabilities v3.2
 
-Telegram assistant at @byron92m_bot with 6 real tools accessible through natural language. Multi-agent LangGraph with DeepSeek V4 Pro planner and 3 specialized workers via sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis with 24h TTL. Graphify code intelligence with 2395 nodes. n8n automation. Playwright web navigation. Context-aware file editing via OpenCode. All workers use Flash FREE except planner. Security hardened. Total cost approximately 0.50 dollars per month.
+Telegram assistant at @byron92m_bot with 6 real tools accessible through natural language. Multi-agent LangGraph with DeepSeek V4 Pro planner and 3 specialized workers via sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis with 24h TTL. Graphify code intelligence with 2395 nodes. n8n automation. Playwright web navigation. Context-aware file editing via OpenCode. PDF processing with no limits. Code generation with JSON format and automatic execution. PowerPoint generation from PDF content. All workers use Flash FREE except planner. Security hardened. Total cost approximately 0.50 dollars per month.

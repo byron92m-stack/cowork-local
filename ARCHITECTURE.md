@@ -2,17 +2,29 @@
 
 ## Overview
 
-Multi-agent system with DeepSeek V4 Pro planner and 3 specialized workers via LangGraph sub-graph architecture. 5 real tools. 16 MCP Servers. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence. 6 projects 100 percent tests. Cost approximately 0.50 dollars per month.
+Multi-agent system with DeepSeek V4 Pro planner and 3 specialized workers via LangGraph sub-graph architecture. 6 real tools. 16 MCP Servers. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence. 6 projects 100 percent tests. Cost approximately 0.50 dollars per month.
 
 ## Multi-Agent Pipeline
 
 Planner uses DeepSeek V4 Pro to classify user intent into 8 types: code_generation, tool_design, tool_filesystem, tool_document, tool_web, tool_edit, tool_shell, chat. Routes to the correct worker via conditional edges.
 
-Three workers implemented as independent sub-graphs. code_worker uses OpenCode plus Flash FREE to generate Python projects with pytest. design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards. mcp_worker runs 6 local tools: filesystem via os.walk, document via pypdf and pandas, web via Playwright, shell via subprocess, and chat via OpenCode + Flash FREE, edit via OpenCode + Flash FREE.
+Three workers implemented as independent sub-graphs. code_worker uses OpenCode plus Flash FREE to generate Python projects with pytest. Now also generates and EXECUTES scripts automatically. Response format: JSON {"code": "script here"}. clean_code() handles JSON, markdown, and removes non-ASCII characters.
+
+design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards via port 34095.
+
+mcp_worker runs 6 local tools: filesystem via os.walk, document via pypdf and pandas (uses state.project_path, extracts ALL pages and ALL text with no limits), web via Playwright, shell via subprocess, chat via OpenCode + Flash FREE, edit via OpenCode + Flash FREE.
 
 Each worker has its own sub-graph with isolated state. CodeWorkerState for code generation, DesignWorkerState for design tasks. MCP worker shares CoworkState for chat history access.
 
 Review evaluates completeness. If tests pass or tool completes, marks done. Decision routes to planner for retry or END. Saves conversation history to Redis. Maximum 5 iterations.
+
+## PDF Processing (Updated)
+
+tool_document now prioritizes state.project_path over searching in user_query. Extracts ALL pages (no limit of 5). Extracts ALL text (no limit of 1000 characters). For long content, save to file and reference path in prompt.
+
+## Code Generation (Updated)
+
+Prompt requests JSON format: {"code": "the complete Python script here"}. clean_code() extracts code from JSON or markdown blocks. Removes non-ASCII characters (em dash, smart quotes, accents). Script is saved AND executed automatically. Output captured in reply.
 
 ## Sub-Graph Architecture
 

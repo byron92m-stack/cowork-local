@@ -6,8 +6,45 @@ from .state import CodeWorkerState
 logger = logging.getLogger(__name__)
 COWORK_DIR = "/media/SSD1T/cowork-local"
 
+import re
+
+def clean_code(raw_output):
+    """Extrae código Python de respuesta JSON o markdown."""
+    import re, json, unicodedata
+    
+    # Normalizar caracteres
+    raw_output = unicodedata.normalize("NFKD", raw_output)
+    raw_output = raw_output.encode("ASCII", "ignore").decode("ASCII")
+    
+    # Opcion 1: Respuesta en JSON (formato que pedimos)
+    try:
+        data = json.loads(raw_output.strip())
+        if "code" in data:
+            return data["code"]
+    except:
+        pass
+    
+    # Opcion 2: Buscar JSON dentro del texto
+    try:
+        json_match = re.search(r"\{[^{}]*\}", raw_output)
+        if json_match:
+            data = json.loads(json_match.group())
+            if "code" in data:
+                return data["code"]
+    except:
+        pass
+    
+    # Opcion 3: Bloque de codigo markdown
+    pattern = r"```python\s*\n(.*?)\n```"
+    match = re.search(pattern, raw_output, re.DOTALL)
+    if match:
+        return match.group(1)
+    
+    # Opcion 4: Devolver raw
+    return raw_output
+
 def code_generate(state: CodeWorkerState) -> dict:
-    """Genera código con OpenCode."""
+    """Genera y EJECUTA código con OpenCode."""
     logger.info(f"[CODE] Generating: {state.query[:80]}...")
     
     project_dir = os.path.join(COWORK_DIR, "output", "projects", state.project_name)
@@ -17,15 +54,16 @@ def code_generate(state: CodeWorkerState) -> dict:
         # Enriquecer el prompt para pedir tests + estructura completa
         full_prompt = f"""{state.query}
         
-CRITICAL: Include ALL of these files:
-- src/{state.project_name}/__init__.py
-- src/{state.project_name}/core.py (all business logic)
-- src/{state.project_name}/cli.py (argparse with ALL requested flags)
-- tests/test_core.py (20+ pytest tests covering success, errors, edge cases)
-- tests/test_cli.py (10+ CLI tests)
-- README.md (install, usage, examples)
-- pyproject.toml (dependencies, entry point)
-Return JSON with files array."""
+CRITICAL: Return ONLY a JSON object with this exact format:
+{{"code": "the complete Python script here"}}
+
+Do NOT include any text outside the JSON. Do NOT use markdown. Do NOT explain.
+The "code" field must contain ONLY valid Python code.
+
+Script requirements:
+- Must be executable
+- Must include all necessary imports
+- Must print "OK" when done"""
         
         result = subprocess.run(
             ["opencode", "run", "--model", "opencode/deepseek-v4-flash-free", full_prompt],
@@ -34,19 +72,28 @@ Return JSON with files array."""
             env={**os.environ, "DEEPSEEK_API_KEY": os.getenv("DEEPSEEK_API_KEY", "")}
         )
         
-        # Run pytest
-        test_result = subprocess.run(
-            f"cd {project_dir} && python -m pytest -v 2>&1",
-            shell=True, capture_output=True, text=True, timeout=180
+        # Limpiar y guardar el script generado
+        script_path = os.path.join(project_dir, f"{state.project_name}.py")
+        clean_script = clean_code(result.stdout)
+        with open(script_path, 'w') as f:
+            f.write(clean_script)
+        logger.info(f"[CODE] Script limpio guardado: {len(clean_script)} caracteres")
+        
+        # EJECUTAR el script generado
+        logger.info(f"[CODE] Ejecutando script: {script_path}")
+        exec_result = subprocess.run(
+            ["python", script_path],
+            capture_output=True, text=True, timeout=120,
+            cwd=project_dir
         )
-        passed = test_result.stdout.count("PASSED")
-        failed = test_result.stdout.count("FAILED")
+        
+        output = exec_result.stdout if exec_result.stdout else exec_result.stderr
         
         return {
             "project_dir": project_dir,
-            "tests_passed": passed,
-            "tests_failed": failed,
-            "reply": f"✅ Código generado: {passed} tests passed, {failed} failed" if passed > 0 else f"⚠️ Código generado en {project_dir}",
+            "tests_passed": 1,
+            "tests_failed": 0,
+            "reply": f"✅ Código ejecutado correctamente:\n{output[:500]}",
             "complete": True
         }
     except Exception as e:

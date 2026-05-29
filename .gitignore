@@ -7,36 +7,56 @@ __pycache__/
 dist/
 build/
 
-# Variables de entorno
+# Environment variables (private)
 .env
 
-# Credenciales
+# Credentials (private)
 credentials.json
 
-# Datos generados
-data/logs/*
-data/projects/*
-!data/logs/.gitkeep
-!data/projects/.gitkeep
-
-# Docker
+# Docker override (private local config)
 infra/docker-compose.override.yml
 
-# IDE
+# IDE (private)
 .vscode/
 .idea/
 
-# Archivos del sistema
+# OS (system)
 .DS_Store
 Thumbs.db
 
-# Proyectos generados
-output/
-cowork-vscode/
+# Logs (private)
+data/logs/*
+!data/logs/.gitkeep
+
+# Temp files
+*.tmp
+*.bak
+*.backup*
+
+# Node modules (generated)
 node_modules/
-graphify-out/
-.opencode/
-output/archive/
-browsers/
-output/projects/
+
+# Input files (user documents - private)
 input/
+
+# OpenCode local cache (private)
+.opencode/
+
+# Generated files that should NOT be in repo (output is NOT here - should be tracked)
+output/projects/
+output/archive/
+
+# Graphify cache (regenerable)
+graphify-out/cache/
+
+# Browsers (Playwright - regenerable)
+browsers/
+
+# Graphify output (regenerable)
+graphify-out/
+
+# Output generated files (all)
+output/
+
+# Data projects (test files)
+data/projects/

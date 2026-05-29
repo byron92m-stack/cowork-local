@@ -34,7 +34,7 @@ Phase 29: Code Generation fixes. Prompt now requests JSON format. clean_code() h
 
 Phase 30: PowerPoint generation working. 14 slides with logical structure. Full PDF content preserved. Supports both generic and template-based presentations. Automatic verification of results.
 
-Phase 31: OpenCode.md and README.md updated with new capabilities.
+Phase 31: OPENCODE.md and README.md updated with new capabilities.
 
 ## Current Capabilities v3.2
 

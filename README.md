@@ -1,4 +1,4 @@
-# Cowork-Local v3.2
+# Cowork-Local v3.3
 
 Local multi-agent development assistant with 3 specialized workers running on LangGraph.
 Planner uses DeepSeek V4 Pro. All 3 workers use free models.
@@ -9,7 +9,7 @@ Total cost: ~$0.50/month.
 planner (DeepSeek Pro) -> classifies intent -> route_to_worker
   - code_worker -> graph_code.py -> OpenCode + Flash FREE -> Python projects, scripts, PowerPoints
   - design_worker -> graph_design.py -> OpenDesign API (port 34095) -> UI/UX, landing pages
-  - mcp_worker -> graph_mcp.py -> 6 local tools -> filesystem, document, web, shell, chat, edit
+  - mcp_worker -> graph_mcp.py -> 7 local tools -> filesystem, document, web, shell, chat, edit, mail
 
 ## Workers
 
@@ -23,6 +23,12 @@ planner (DeepSeek Pro) -> classifies intent -> route_to_worker
 - OpenDesign daemon on port 34095
 - Generates web prototypes, landing pages, UI/UX
 - Healthcheck before calling
+
+### mail_worker
+- mail_send: Send emails via Mail.ru SMTP
+- mail_read: Read inbox via IMAP
+- calendar_add: Send .ics invitations
+- Config: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT
 
 ### mcp_worker
 - filesystem: file search with os.walk

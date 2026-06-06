@@ -1,8 +1,8 @@
-# Architecture — Cowork-Local v3.2
+# Architecture — Cowork-Local v3.3
 
 ## Overview
 
-Multi-agent system with DeepSeek V4 Pro planner and 3 specialized workers via LangGraph sub-graph architecture. 6 real tools. 16 MCP Servers. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence. 6 projects 100 percent tests. Cost approximately 0.50 dollars per month.
+Multi-agent system with DeepSeek V4 Pro planner and 3 specialized workers via LangGraph sub-graph architecture. 7 real tools. 16 MCP Servers. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence. 6 projects 100 percent tests. Cost approximately 0.50 dollars per month.
 
 ## Multi-Agent Pipeline
 
@@ -12,7 +12,9 @@ Three workers implemented as independent sub-graphs. code_worker uses OpenCode p
 
 design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards via port 34095.
 
-mcp_worker runs 6 local tools: filesystem via os.walk, document via pypdf and pandas (uses state.project_path, extracts ALL pages and ALL text with no limits), web via Playwright, shell via subprocess, chat via OpenCode + Flash FREE, edit via OpenCode + Flash FREE.
+mail_worker uses Mail.ru SMTP (port 465 SSL) and IMAP (port 993 SSL) to send/receive emails. Tools: mail_send, mail_read, calendar_add (ICS invitations). Auth via app password with 2FA. Config in .env: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT.
+
+mcp_worker runs 7 local tools: filesystem via os.walk, document via pypdf and pandas (uses state.project_path, extracts ALL pages and ALL text with no limits), web via Playwright, shell via subprocess, chat via OpenCode + Flash FREE, edit via OpenCode + Flash FREE, mail via Mail.ru SMTP/IMAP with app password.
 
 Each worker has its own sub-graph with isolated state. CodeWorkerState for code generation, DesignWorkerState for design tasks. MCP worker shares CoworkState for chat history access.
 

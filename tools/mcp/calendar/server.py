@@ -48,15 +48,15 @@ async def call_tool(name: str, args: dict[str, Any]) -> list[TextContent]:
         with open(ics_file, "w") as f:
             f.write(ics_content)
         
-        # Enviar por Gmail
-        user = os.getenv("GMAIL_USER","")
-        pwd = os.getenv("GMAIL_APP_PASSWORD","")
+        # Enviar por email
+        user = os.getenv("MAIL_USER","")
+        pwd = os.getenv("MAIL_PASSWORD","")
         if not user or not pwd:
-            return [TextContent(type="text", text="⚠️ Configurá GMAIL_USER y GMAIL_APP_PASSWORD en .env")]
+            return [TextContent(type="text", text="⚠️ Configurá MAIL_USER y MAIL_PASSWORD en .env")]
         
         try:
             import yagmail
-            yag = yagmail.SMTP(user, pwd)
+            yag = yagmail.SMTP(user=user, password=pwd, host=os.getenv("MAIL_SMTP_HOST", "smtp.mail.ru"), port=int(os.getenv("MAIL_SMTP_PORT", "465")))
             yag.send(
                 to=user,
                 subject=f"📅 {summary}",

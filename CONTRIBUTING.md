@@ -1,6 +1,6 @@
-# Contributing to Cowork-Local v3.2
+# Contributing to Cowork-Local v3.3
 
-Multi-agent development assistant with DeepSeek V4 Pro planner and 3 specialized workers via LangGraph sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis. 6 projects 100 percent tests.
+Multi-agent development assistant with DeepSeek V4 Pro planner and 3 specialized workers via LangGraph sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis. 6 projects 100 percent tests. Mail.ru email integration.
 
 ## Development Setup
 
@@ -22,6 +22,8 @@ Python 3.13 plus with venv. Node.js 22 plus with npm. Docker and Docker Compose.
 ## Architecture Guidelines
 
 Adding a Worker Sub-Graph: Create graph/graph_new.py with build function returning compiled graph. Define state class in graph/state.py. Add wrapper function in graph/graph.py that invokes the sub-graph and maps results to CoworkState. Register worker node in build_graph and add routing in route_to_worker.
+
+Adding an Email Server: Configure Mail.ru account with 2FA and app password. Set MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT in .env. Use yagmail for SMTP (port 465 SSL) and imaplib for IMAP (port 993 SSL). Register in tools/mcp_client.py as "mail". Add mail_send and mail_read tools. For calendar, send .ics files as attachments via email.
 
 Adding an MCP Server: Create tools/mcp/name/server.py. Implement call_tool. Register in tools/mcp_client.py. Add security rules to config/settings.yaml.
 

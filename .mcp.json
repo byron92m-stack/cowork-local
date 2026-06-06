@@ -72,14 +72,6 @@
       ],
       "env": {}
     },
-    "gmail": {
-      "command": "python",
-      "args": [
-        "-m",
-        "tools.mcp.gmail.server"
-      ],
-      "env": {}
-    },
     "googledrive": {
       "command": "python",
       "args": [
@@ -134,6 +126,14 @@
         "tools.mcp.postgresql.server"
       ],
       "cwd": "/media/SSD1T/cowork-local"
+    },
+    "mail": {
+      "command": "python",
+      "args": [
+        "-m",
+        "tools.mcp.mail.server"
+      ],
+      "env": {}
     }
   }
 }

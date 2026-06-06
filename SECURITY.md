@@ -20,7 +20,7 @@ File Watcher Security: Monitors specified directories only. Filters by file exte
 
 Graph Security: LangGraph loop limited to 5 iterations. DeepSeek planner uses JSON mode with response_format json_object. OpenCode worker runs via subprocess with timeout protection. Validation runs pytest in subprocess. Multi-file generation with path sanitization. Auto-install and auto-tests with timeout protection.
 
-Integration Security: Gmail and Telegram use dedicated bot accounts, never personal credentials. Google Calendar uses email invitations via ICS files, no OAuth tokens stored. All external API calls use environment variables for authentication.
+Integration Security: Mail.ru and Telegram use dedicated bot accounts, never personal credentials. Calendar uses email invitations via ICS files sent through Mail.ru SMTP, no OAuth tokens stored. All external API calls use environment variables for authentication.
 
 OpenCode Worker Security: OpenCode CLI runs as subprocess with 600 second timeout. Flash FREE model accessed via OpenCode configuration, no direct API key exposure. Worker prompt requests JSON format to avoid markdown injection. clean_code() removes non-ASCII characters and validates output before execution.
 
@@ -62,4 +62,4 @@ Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed pa
 
 ## Supported Versions
 
-Version 3.2 with 3 workers via sub-graph architecture.
+Version 3.3 with 3 workers via sub-graph architecture + Mail.ru email integration.

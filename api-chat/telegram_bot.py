@@ -1,6 +1,6 @@
 import time, requests, os, sys, json, redis
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8734865184:AAE53p-n9Uc-xmmYzPiB7EROiG_Xw5ci98k")
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 REDIS = redis.Redis(host='localhost', port=6379, decode_responses=True)
 STATE_FILE = "/media/SSD1T/cowork-local/data/telegram_state.txt"
 

@@ -36,6 +36,8 @@ Phase 30: PowerPoint generation working. 14 slides with logical structure. Full 
 
 Phase 31: OPENCODE.md and README.md updated with new capabilities.
 
-## Current Capabilities v3.2
+Phase 32: Mail.ru email migration v3.3. Replaced Gmail with Mail.ru (Gmail blocked bot account). SMTP port 465 SSL, IMAP port 993 SSL. App password with 2FA. Migrated 5 files: tools/mcp/gmail/ → tools/mcp/mail/, mcp_client.py, calendar/server.py, skills/server.py, .env. Updated .mcp.json. All references to Gmail removed. Graphify updated to 2713 nodes. Security audit: removed hardcoded API keys from api-chat/chat.py and api-chat/telegram_bot.py. Documentation updated: OPENCODE.md, README.md, ARCHITECTURE.md, SECURITY.md, COWORK_PLAN.md.
 
-Telegram assistant at @byron92m_bot with 6 real tools accessible through natural language. Multi-agent LangGraph with DeepSeek V4 Pro planner and 3 specialized workers via sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis with 24h TTL. Graphify code intelligence with 2395 nodes. n8n automation. Playwright web navigation. Context-aware file editing via OpenCode. PDF processing with no limits. Code generation with JSON format and automatic execution. PowerPoint generation from PDF content. All workers use Flash FREE except planner. Security hardened. Total cost approximately 0.50 dollars per month.
+## Current Capabilities v3.3
+
+Telegram assistant at @byron92m_bot with 7 real tools accessible through natural language. Multi-agent LangGraph with DeepSeek V4 Pro planner and 3 specialized workers via sub-graph architecture. 16 MCP Servers. PostgreSQL plus Redis with 24h TTL. Graphify code intelligence with 2713 nodes. n8n automation. Playwright web navigation. Context-aware file editing via OpenCode. PDF processing with no limits. Code generation with JSON format and automatic execution. PowerPoint generation from PDF content. Mail.ru email integration with SMTP/IMAP. All workers use Flash FREE except planner. Security hardened. Total cost approximately 0.50 dollars per month.

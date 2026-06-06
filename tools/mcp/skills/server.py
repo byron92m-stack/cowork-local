@@ -100,7 +100,7 @@ async def list_tools() -> list[Tool]:
         # Comunicación
         Tool(
             name="send_email",
-            description="Envía un email usando Gmail (requiere credenciales configuradas)",
+            description="Envía un email usando Mail.ru (requiere credenciales configuradas)",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -423,13 +423,13 @@ async def call_tool(name: str, args: dict[str, Any]) -> list[TextContent]:
         try:
             import yagmail
             
-            user = os.getenv("GMAIL_USER", "")
-            password = os.getenv("GMAIL_APP_PASSWORD", "")
+            user = os.getenv("MAIL_USER", "")
+            password = os.getenv("MAIL_PASSWORD", "")
             
             if not user or not password:
-                return [TextContent(type="text", text="⚠️ Configurá GMAIL_USER y GMAIL_APP_PASSWORD en .env")]
+                return [TextContent(type="text", text="⚠️ Configurá MAIL_USER y MAIL_PASSWORD en .env")]
             
-            yag = yagmail.SMTP(user, password)
+            yag = yagmail.SMTP(user=user, password=password, host=os.getenv("MAIL_SMTP_HOST", "smtp.mail.ru"), port=int(os.getenv("MAIL_SMTP_PORT", "465")))
             
             if attachment and os.path.exists(attachment):
                 yag.send(to=to, subject=subject, contents=body, attachments=attachment)
@@ -512,19 +512,19 @@ async def call_tool(name: str, args: dict[str, Any]) -> list[TextContent]:
     if name == "generate_tests":
         code = args.get("code", "")
         import httpx
-        import os; key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Genera SOLO tests unitarios con pytest:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
+        key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Genera SOLO tests unitarios con pytest:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
         return [TextContent(type="text", text=r.json().get("response","") or r.json().get("thinking","")[:3000])]
     
     if name == "review_code":
         code = args.get("code", "")
         import httpx
-        import os; key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Revisa bugs, mejoras y buenas practicas:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
+        key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Revisa bugs, mejoras y buenas practicas:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
         return [TextContent(type="text", text=r.json().get("response","") or r.json().get("thinking","")[:3000])]
     
     if name == "generate_docs":
         code = args.get("code", "")
         import httpx
-        import os; key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Genera docstrings y documentacion:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
+        key = os.getenv("DEEPSEEK_API_KEY",""); r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={"model":"deepseek-chat","messages":[{"role":"user","content":f"Genera docstrings y documentacion:\n\n{code}"}],"max_tokens":2048,"temperature":0.2}, headers={"Authorization":f"Bearer {key}"}, timeout=30)
         return [TextContent(type="text", text=r.json().get("response","") or r.json().get("thinking","")[:3000])]
     
     return [TextContent(type="text", text=f"❓ Skill no encontrado: {name}")]

@@ -1,4 +1,4 @@
-# Cowork-Local v3.3
+# Cowork-Local v3.4
 
 ## Modes
 - **Cowork**: `python apps/cli/cowork_graph.py "task"` — multi-agent, Planner(Pro) + 3 workers (OpenCode/OpenDesign/MCP), 5 iteraciones, timeout 600s
@@ -10,6 +10,7 @@ LangGraph con sub-grafos independientes:
 - `code_worker` → OpenCode + Flash FREE → Python projects, scripts, PowerPoints
 - `design_worker` → OpenDesign API (port 34095) → UI/UX
 - `mcp_worker` → tools: filesystem, document, web, shell, chat, edit, mail, calendar, skills
+- `booking_worker` → medical appointment booking (Telegram + Email)
 
 ## Models
 - Planner/Reviewer: deepseek-v4-pro
@@ -34,16 +35,27 @@ LangGraph con sub-grafos independientes:
 - Tools: mail_send, mail_read, calendar_add, send_email (skills)
 - Config: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT
 
+
+## Booking Agency (v3.4)
+- Medical appointments via Telegram (@byron92m_bot) + Email
+- Patient ID: cédula/RUC/passport with validation
+- Flow: ID → name+email → intent → date (dateparser+Flash) → time → confirm
+- DB: patients, appointments, availability, email_queue
+- Redis session by doc_id (2h TTL), ICS invitations, 24h reminders
+- Commands: /start, /citas, /cancelar, /ayuda, /reset
+
 ## Rules
 - Generate code, don't explain. Use absolute paths.
 - For long content: save to file first, then reference path
 - See `rules/api.md` and `rules/security.md`
 
 ## Telegram Assistant
-- Commands: /list, /switch, /nueva, /cerrar, /estado, /pc, /ayuda
-- Redis memory, whitelist Chat ID, --confirm for shell/web
+- Booking bot with appointment agency + legacy Cowork
+- Booking commands: /start, /citas, /cancelar, /ayuda, /reset
+- Legacy: /list, /switch, /nueva, /cerrar, /estado, /pc
+- Multi-session by doc_id, 24h APScheduler reminders, rate limiting
 
 ## Infrastructure
 - PostgreSQL + Redis
 - Graphify knowledge graph
-- 16 MCP servers, Playwright in `/browsers/`
+- 16 MCP servers, Playwright in `/browsers/`, APScheduler for reminders

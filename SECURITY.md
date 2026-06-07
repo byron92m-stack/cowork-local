@@ -20,7 +20,7 @@ File Watcher Security: Monitors specified directories only. Filters by file exte
 
 Graph Security: LangGraph loop limited to 5 iterations. DeepSeek planner uses JSON mode with response_format json_object. OpenCode worker runs via subprocess with timeout protection. Validation runs pytest in subprocess. Multi-file generation with path sanitization. Auto-install and auto-tests with timeout protection.
 
-Integration Security: Mail.ru and Telegram use dedicated bot accounts, never personal credentials. Calendar uses email invitations via ICS files sent through Mail.ru SMTP, no OAuth tokens stored. All external API calls use environment variables for authentication.
+Integration Security: Mail.ru and Telegram use dedicated bot accounts (josue.martinez.593@mail.ru, @byron92m_bot), never personal credentials. Calendar uses email invitations via ICS files sent through Mail.ru SMTP, no OAuth tokens stored. All external API calls use environment variables for authentication.
 
 OpenCode Worker Security: OpenCode CLI runs as subprocess with 600 second timeout. Flash FREE model accessed via OpenCode configuration, no direct API key exposure. Worker prompt requests JSON format to avoid markdown injection. clean_code() removes non-ASCII characters and validates output before execution.
 
@@ -35,7 +35,7 @@ PDF files read via pypdf with no shell execution. Extracted text sanitized. No P
 Generated scripts saved to output/projects/ directory. Scripts executed via subprocess.run with timeout. Output captured, not printed directly to terminal. JSON validation before script extraction. Non-ASCII characters removed to prevent injection.
 
 ## Redis Security
-Redis runs locally without password on port 6379. Not exposed externally. Keys have TTL (5 minutes to 1 hour) to auto-expire and prevent memory buildup. No sensitive data stored permanently in Redis.
+Redis runs locally without password on port 6379. Not exposed externally. Booking sessions keyed by doc_id with 2h TTL. Keys have TTL (5 minutes to 1 hour) to auto-expire and prevent memory buildup. No sensitive data stored permanently in Redis.
 
 ## n8n Security
 n8n API key stored in dotenv file excluded from Git. MCP server uses JWT authentication. Webhook endpoints protected by n8n internal auth. Credentials configured via n8n UI, not exposed in workflow JSON exports.
@@ -44,7 +44,11 @@ n8n API key stored in dotenv file excluded from Git. MCP server uses JWT authent
 Graphify output stored in graphify-out/ directory. GRAPH_REPORT.md contains function names and file paths only, no secrets. Excluded from Git. Regenerated via graphify update . after code changes.
 
 ## Telegram Bot Security
-Chat ID whitelist: only authorized user (8047752200) can interact with the bot. Unknown chat_ids receive rejection message. Telegram Bot Token stored in .env via TELEGRAM_BOT_TOKEN variable. API credentials in environment variables, not hardcoded.
+Chat ID open for patient bookings. Rate limiting (15 msg/min) and input sanitization replace whitelist for booking mode. Legacy Cowork mode restricted to authorized Chat ID (8047752200). Telegram Bot Token stored in .env via TELEGRAM_BOT_TOKEN variable. API credentials in environment variables, not hardcoded.
+
+
+## Booking Agency Security
+Patient identification by cédula/RUC/passport with validation algorithm (Ecuadorian ID checksum, RUC format, passport format). doc_id serves as universal patient key across Telegram and Email channels, preventing cross-channel identity confusion. Rate limiting: 15 messages per minute per Telegram user, 3 emails per hour per address. Input sanitization: max 500 chars (Telegram) or 1000 chars (Email), control characters stripped. Prompt injection defenses applied to all LLM calls (intent classification, data extraction, chat). DeepSeek Flash API used with JSON mode for structured outputs preventing injection. Session state in Redis keyed by doc_id (2h TTL), isolated per patient. Email IMAP polling restricted to UNSEEN messages from last 5 minutes, max 5 per cycle. Email queue respects Mail.ru 1 email/minute rate limit with double protection (APScheduler 60s interval + last_sent_time check). Patient data (appointments, personal info) only accessible via authenticated doc_id. /reset command unlinks telegram_chat_id without deleting patient records, enabling multi-identity support without data loss. APScheduler runs in-process within Telegram bot, no external cron exposure.
 
 ## Tool Security
 
@@ -62,4 +66,4 @@ Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed pa
 
 ## Supported Versions
 
-Version 3.3 with 3 workers via sub-graph architecture + Mail.ru email integration.
+Version 3.4 with 4 workers via sub-graph architecture + Mail.ru email + Booking Agency (Telegram + Email).

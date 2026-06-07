@@ -189,3 +189,41 @@ class DesignWorkerState(BaseModel):
     
     class Config:
         arbitrary_types_allowed = True
+
+# ─── Estado del Worker de Booking (Agencia de Citas) ────────────────
+class BookingState(BaseModel):
+    """Estado aislado para el worker de booking (vendedor IA)."""
+    # Canal y usuario
+    channel: str = "telegram"  # telegram | email
+    user_id: str = ""  # chat_id o email
+    patient_id: str = ""  # UUID del paciente en PostgreSQL
+    
+    # Flujo de conversación
+    intent: str = "chat"  # chat | booking | cancel | reschedule | info
+    step: str = "router"  # router | chat | booking | cancel | confirm | done
+    
+    # Datos recolectados
+    service: str = "consulta_30min"
+    selected_date: str = ""  # "2026-06-10"
+    selected_slot: str = ""  # "09:00"
+    available_slots: list = []
+    
+    # Cita
+    appointment_id: str = ""  # UUID
+    
+    # Mensajes
+    user_message: str = ""  # último mensaje del usuario
+    reply: str = ""  # respuesta para el usuario
+    
+    # Historial de conversación (últimos N mensajes)
+    history: list = []
+    
+    # Identificación única
+    doc_id: str = ""  # cédula/ruc/pasaporte
+    
+    # Metadata
+    complete: bool = False
+    error: str = ""
+    
+    class Config:
+        arbitrary_types_allowed = True

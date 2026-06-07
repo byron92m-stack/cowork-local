@@ -1,8 +1,8 @@
-# Cowork-Local v3.3
+# Cowork-Local v3.4
 
-Local multi-agent development assistant with 3 specialized workers running on LangGraph.
-Planner uses DeepSeek V4 Pro. All 3 workers use free models.
-Total cost: ~$0.50/month.
+Local multi-agent development assistant with 4 specialized workers running on LangGraph.
+Planner uses DeepSeek V4 Pro. All 4 workers (3 free + 1 low-cost API).
+Total cost: ~$0.50/month. Booking worker adds ~$0.30/month per 1000 appointments.
 
 ## Architecture
 
@@ -10,6 +10,7 @@ planner (DeepSeek Pro) -> classifies intent -> route_to_worker
   - code_worker -> graph_code.py -> OpenCode + Flash FREE -> Python projects, scripts, PowerPoints
   - design_worker -> graph_design.py -> OpenDesign API (port 34095) -> UI/UX, landing pages
   - mcp_worker -> graph_mcp.py -> 7 local tools -> filesystem, document, web, shell, chat, edit, mail
+  - booking_worker -> graph_booking.py -> medical appointment agency (Telegram + Email)
 
 ## Workers
 
@@ -29,6 +30,19 @@ planner (DeepSeek Pro) -> classifies intent -> route_to_worker
 - mail_read: Read inbox via IMAP
 - calendar_add: Send .ics invitations
 - Config: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT
+
+
+### booking_worker
+- Medical appointment booking agency
+- Patient ID: cédula/RUC/passport with validation algorithm
+- Flow: ID → name+email → intent classification → date (dateparser+Flash) → time → confirm
+- Channels: Telegram (@byron92m_bot) + Email (Mail.ru IMAP polling)
+- DB tables: patients, appointments, availability, email_queue, faqs, appointment_history
+- Redis session state by doc_id (2h TTL)
+- ICS calendar invitations via email queue (1/min Mail.ru rate limit)
+- 24h reminders: Telegram for Telegram users, Email for email users (APScheduler)
+- Commands: /start, /citas, /cancelar, /ayuda, /reset
+- Security: rate limiting, input sanitization, doc_id as universal patient key
 
 ### mcp_worker
 - filesystem: file search with os.walk
@@ -61,6 +75,7 @@ pip install -r requirements.txt
 PostgreSQL: cowork:coworkpass@127.0.0.1:5432/coworkdb
 Redis: localhost:6379
 OpenDesign daemon: http://127.0.0.1:34095
+Mail.ru SMTP/IMAP: smtp.mail.ru:465 / imap.mail.ru:993
 
 ## Main Commands
 
@@ -84,18 +99,19 @@ python3 -c "import redis; r=redis.Redis(host='localhost',port=6379); r.flushall(
 
 ## Telegram Assistant
 
-Bot: @byron92m_bot
-Authorized Chat ID: 8047752200
-Commands: /list, /switch, /nueva, /cerrar, /estado, /pc, /ayuda
-Memory: Redis with 24h TTL per chat_id
-Security: Chat ID whitelist, --confirm for shell/web
+Bot: @byron92m_bot (booking agency + legacy Cowork)
+Booking commands: /start, /citas, /cancelar, /ayuda, /reset
+Legacy commands: /list, /switch, /nueva, /cerrar, /estado, /pc
+Memory: Redis by doc_id (2h TTL)
+Security: rate limiting (15 msg/min), input sanitization, prompt injection defense
 
 ## Capabilities
 
-7 intent types:
+8 intent types (7 Cowork + booking):
 - code_generation -> code_worker
 - tool_design -> design_worker
 - tool_filesystem, tool_document, tool_web, tool_shell, chat -> mcp_worker
+- booking -> booking_worker
 
 6 projects with 100% tests: webreq, logview, gitstat, tcpdump-cli, ai-reviewer, graph-report
 
@@ -103,7 +119,7 @@ Security: Chat ID whitelist, --confirm for shell/web
 
 cowork-local/
   api-chat/              FastAPI + Telegram bot
-  graph/                 LangGraph (3 sub-graphs)
+  graph/                 LangGraph (4 sub-graphs)
   apps/cli/              CLI tools
   tools/mcp/             16 MCP servers
   infra/                 Docker Compose

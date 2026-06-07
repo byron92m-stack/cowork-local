@@ -1,8 +1,31 @@
-import time, requests, os, sys, json, redis
+"""Telegram Bot - Booking Agency Worker."""
+import time, requests, os, sys, json, re, asyncio
+from collections import defaultdict
+from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+load_dotenv()
+
+sys.path.insert(0, "/media/SSD1T/cowork-local")
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-REDIS = redis.Redis(host='localhost', port=6379, decode_responses=True)
 STATE_FILE = "/media/SSD1T/cowork-local/data/telegram_state.txt"
+AUTHORIZED_CHAT_ID = "8047752200"
+
+# Rate limiting: 15 msg/min por usuario
+_ratelimit = defaultdict(list)
+
+def check_rate(chat_id, max_per_minute=15):
+    now = time.time()
+    _ratelimit[chat_id] = [t for t in _ratelimit[chat_id] if now - t < 60]
+    if len(_ratelimit[chat_id]) >= max_per_minute:
+        return False
+    _ratelimit[chat_id].append(now)
+    return True
+
+def sanitize(text):
+    text = text[:500]
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    return text.strip()
 
 # Cargar último update_id
 if os.path.exists(STATE_FILE):
@@ -19,101 +42,157 @@ def save_state(uid):
     with open(STATE_FILE, "w") as f:
         f.write(str(uid))
 
-def get_session(chat_id):
-    """Obtener o crear sesión para un chat_id"""
-    session_key = f"cowork:session:{chat_id}"
-    current = REDIS.get(f"cowork:current:{chat_id}") or session_key
-    return current
+def send_message(chat_id, text):
+    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                  json={"chat_id": chat_id, "text": text[:4000]})
 
-def set_session(chat_id, session_name):
-    """Cambiar a una sesión específica"""
-    REDIS.set(f"cowork:current:{chat_id}", session_name)
-    return session_name
-
-def list_sessions(chat_id):
-    """Listar todas las sesiones disponibles"""
-    all_sessions = REDIS.keys("cowork:session:*")
-    current = get_session(chat_id)
-    result = ["📋 *Sesiones activas:*\n"]
-    for s in sorted(all_sessions):
-        name = s.replace("cowork:session:", "")
-        marker = " ← actual" if s == current else ""
-        result.append(f"• `{name}`{marker}")
-    return "\n".join(result) if len(all_sessions) > 1 else "Solo tenés una sesión activa."
-
+# ─── Comandos ────────────────────────────────────────────
 def handle_command(chat_id, text):
-    """Procesar comandos del bot"""
-    parts = text.strip().split()
-    cmd = parts[0].lower()
+    cmd = text.strip().lower()
     
-    if cmd == "/list" or cmd == "/sesiones" or cmd == "/listar":
-        return list_sessions(chat_id)
-    
-    elif cmd == "/switch" or cmd == "/cambiar":
-        if len(parts) < 2:
-            return "Usá: `/switch nombre_de_sesion`\nEj: `/switch pc-terminal`"
-        session_name = parts[1]
-        session_key = f"cowork:session:{session_name}"
-        if REDIS.exists(session_key):
-            set_session(chat_id, session_key)
-            return f"✅ Cambiado a sesión `{session_name}`"
-        return f"❌ No existe la sesión `{session_name}`. Usá `/list` para ver las disponibles."
-    
-    elif cmd == "/nueva" or cmd == "/new":
-        if len(parts) < 2:
-            return "Usá: `/nueva nombre_de_sesion`"
-        session_name = parts[1]
-        session_key = f"cowork:session:{session_name}"
-        REDIS.setex(session_key, 3600, json.dumps({"created": True, "name": session_name}))
-        set_session(chat_id, session_key)
-        return f"✅ Sesión `{session_name}` creada y activada. Duración: 1 hora."
-    
-    elif cmd == "/cerrar" or cmd == "/close":
-        current = get_session(chat_id)
-        REDIS.delete(current)
-        # Volver a la sesión default del chat
-        default = f"cowork:session:{chat_id}"
-        set_session(chat_id, default)
-        return f"✅ Sesión cerrada. Volviste a la sesión por defecto."
-    
-    elif cmd == "/estado" or cmd == "/status":
-        current = get_session(chat_id)
-        name = current.replace("cowork:session:", "")
-        data = REDIS.get(current)
-        info = "vacía" if not data else "con datos"
-        return f"📊 Sesión actual: `{name}` ({info})"
-    
-    elif cmd == "/pc":
-        # Sincronizar con sesión de PC
-        pc_session = "cowork:session:pc-terminal"
-        if REDIS.exists(pc_session):
-            set_session(chat_id, pc_session)
-            return "✅ Conectado a la sesión de la PC. Ambos comparten la misma conversación."
-        else:
-            # Crear sesión compartida
-            REDIS.setex(pc_session, 3600, json.dumps({"shared": True}))
-            set_session(chat_id, pc_session)
-            return "✅ Sesión compartida PC-Telegram creada. En la PC usá `--session pc-terminal`."
-    
-    elif cmd == "/ayuda" or cmd == "/help":
-        return """🤖 *Comandos disponibles:*
-/list - Ver todas las sesiones
-/switch NOMBRE - Cambiar de sesión
-/nueva NOMBRE - Crear sesión nueva
-/cerrar - Cerrar sesión actual
-/estado - Ver estado de la sesión
-/pc - Conectar con sesión de la PC
-/ayuda - Este mensaje"""
-    
-    return None  # No es un comando, es un mensaje normal
+    if cmd in ("/start", "/ayuda", "/help"):
+        return """👋 ¡Hola! Soy el asistente del consultorio.
 
-print(f"🤖 Asistente Cowork iniciado. Último ID: {last_update_id}")
-print("   Comandos: /list /switch /nueva /cerrar /estado /pc /ayuda")
-print("   Escribile a @byron92m_bot...")
+🩺 *Consulta médica general*
+• 30 minutos • $30
+• Lunes a viernes, 8:00 a 17:00
+
+*Comandos:*
+/citas - Ver tus citas agendadas
+/cancelar - Cancelar tu última cita
+/ayuda - Ver este mensaje
+
+Escribime para agendar una cita o hacerme cualquier consulta. 😊"""
+    
+    elif cmd == "/citas":
+        return handle_citas(chat_id)
+    
+    elif cmd == "/cancelar":
+        return handle_cancel(chat_id)
+    
+    return None
+
+def handle_citas(chat_id):
+    """Muestra citas del paciente desde DB directo (sin LLM)."""
+    try:
+        from graph.booking_db import get_pool, get_or_create_patient, get_patient_appointments
+        import asyncio
+        
+        async def _get():
+            pool = await get_pool()
+            patient = await get_or_create_patient(pool, "telegram", str(chat_id))
+            appts = await get_patient_appointments(pool, str(patient['id']))
+            await pool.close()
+            return appts
+        
+        appts = asyncio.run(_get())
+        
+        if not appts:
+            return "No tenés citas agendadas. ¿Querés agendar una? Escribime."
+        
+        lines = ["📅 *Tus citas:*\n"]
+        for a in appts[:5]:
+            start = a['start_time'].strftime('%d/%m/%Y %H:%M') if a['start_time'] else '?'
+            status_map = {
+                'pending': '⏳ Pendiente',
+                'confirmed': '✅ Confirmada',
+                'cancelled': '❌ Cancelada',
+                'completed': '✔️ Completada',
+                'no_show': '🚫 No asistió'
+            }
+            st = status_map.get(a['status'], a['status'])
+            lines.append(f"• {start} - {st}")
+        
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error al consultar citas. Intentá de nuevo."
+
+def handle_cancel(chat_id):
+    """Cancela la última cita activa del paciente."""
+    try:
+        from graph.booking_db import get_pool, get_or_create_patient, get_patient_appointments, update_appointment_status
+        import asyncio
+        
+        async def _cancel():
+            pool = await get_pool()
+            patient = await get_or_create_patient(pool, "telegram", str(chat_id))
+            appts = await get_patient_appointments(pool, str(patient['id']))
+            active = [a for a in appts if a['status'] in ('pending', 'confirmed')]
+            
+            if not active:
+                await pool.close()
+                return None, "No tenés citas activas para cancelar."
+            
+            # Cancelar la más próxima
+            a = active[0]
+            await update_appointment_status(pool, str(a['id']), 'cancelled', 'patient')
+            start = a['start_time'].strftime('%d/%m/%Y %H:%M') if a['start_time'] else '?'
+            await pool.close()
+            return a, start
+        
+        appt, msg_or_start = asyncio.run(_cancel())
+        
+        if appt is None:
+            return msg_or_start
+        
+        return f"✅ Cancelé tu cita del {msg_or_start}. Si querés reagendar, avisame."
+    except Exception as e:
+        return f"Error al cancelar. Intentá de nuevo."
+
+# ─── Recordatorio ─────────────────────────────────────────
+def check_reminders():
+    """Busca citas en 24h y envía recordatorio por Telegram o email según source_channel."""
+    import asyncio as asyncio_mod
+    from graph.booking_db import get_pool, enqueue_email
+    
+    async def _check():
+        from datetime import datetime, timedelta
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            target = datetime.now() + timedelta(hours=24)
+            start = target - timedelta(minutes=30)
+            end = target + timedelta(minutes=30)
+            rows = await conn.fetch(
+                """SELECT a.source_channel, a.start_time, p.telegram_chat_id, p.email, p.full_name
+                   FROM appointments a JOIN patients p ON a.patient_id = p.id
+                   WHERE a.status = 'confirmed'
+                   AND a.start_time BETWEEN $1 AND $2""",
+                start, end)
+            for row in rows:
+                ts = row['start_time'].strftime('%d/%m a las %H:%M') if row['start_time'] else '?'
+                msg = f"Recordatorio: Tenés una consulta médica mañana {ts}. Te esperamos."
+                
+                if row['source_channel'] == 'telegram' and row['telegram_chat_id']:
+                    # Telegram → enviar por Telegram
+                    try:
+                        requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                            json={"chat_id": row['telegram_chat_id'], "text": f"🔔 {msg}"}, timeout=10)
+                        print(f"📱 Recordatorio Telegram: {row['full_name']}")
+                    except Exception as e:
+                        print(f"❌ Telegram: {e}")
+                elif row['source_channel'] == 'email' and row['email']:
+                    # Email → encolar email de recordatorio
+                    await enqueue_email(pool, row['email'],
+                        "Recordatorio de cita médica",
+                        f"Hola {row.get('full_name', '')},\n\n{msg}")
+                    print(f"📧 Recordatorio Email encolado: {row['email']}")
+        await pool.close()
+    
+    asyncio_mod.run(_check())
+
+# ─── Main Loop ────────────────────────────────────────────
+print("🩺 Bot del Consultorio iniciado")
+print("   Comandos: /start /citas /cancelar /ayuda")
+
+# Iniciar scheduler de recordatorios (cada 1 hora)
+scheduler = BackgroundScheduler()
+scheduler.add_job(check_reminders, 'interval', hours=1, id='reminders')
+scheduler.start()
+print("   Recordatorios: cada 1 hora")
 
 while True:
     try:
-        r = requests.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates", 
+        r = requests.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates",
                         params={"offset": last_update_id + 1, "timeout": 10})
         updates = r.json().get("result", [])
         
@@ -128,40 +207,40 @@ while True:
             if not text or not chat_id:
                 continue
             
-            # SEGURIDAD NIVEL 1: Solo mi usuario
-            if str(chat_id) != "8047752200":
-                requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                    json={"chat_id": chat_id, "text": "⛔ Bot privado. Solo responde a @ByronMartinez92."})
-                print(f"🚫 Bloqueado: {chat_id}")
+            text = sanitize(text)
+            chat_id_str = str(chat_id)
+            
+            print(f"📩 [{chat_id_str}] {text[:60]}...")
+            
+            # Rate limit
+            if not check_rate(chat_id_str):
+                send_message(chat_id, "Esperá un momento antes de enviar otro mensaje.")
                 continue
             
-            print(f"📩 [{chat_id}] {text[:50]}...")
-            
-            # Verificar si es un comando
-            command_response = handle_command(chat_id, text)
-            if command_response:
-                requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                    json={"chat_id": chat_id, "text": command_response, "parse_mode": "Markdown"})
-                print("✅ Comando procesado")
+            # Comandos
+            cmd_response = handle_command(chat_id_str, text)
+            if cmd_response:
+                send_message(chat_id, cmd_response)
+                print("✅ Comando")
                 continue
             
-            # Mensaje normal → enviar a Cowork
-            login = requests.post("http://127.0.0.1:8000/auth/login",
-                json={"username": os.getenv("API_USER", "admin"), "password": os.getenv("API_PASS", "admin123")}).json()
-            
-            # Usar la sesión actual del chat
-            current_session = get_session(chat_id)
-            
-            chat = requests.post("http://127.0.0.1:8000/chat/assistant",
-                json={"content": text, "chat_id": current_session},
-                headers={"Authorization": f"Bearer {login.get('access_token','')}"}).json()
-            
-            reply = chat.get("reply", "Error")
-            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                json={"chat_id": chat_id, "text": reply[:4000]})
-            print("✅")
+            # Vendedor IA
+            try:
+                from graph.graph_booking import run_booking
+                result = asyncio.run(run_booking(
+                    channel="telegram",
+                    user_id=chat_id_str,
+                    message=text
+                ))
+                reply = result.reply or "¿En qué puedo ayudarte?"
+                send_message(chat_id, reply)
+                print("✅")
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                send_message(chat_id, "Perdón, tuve un error. ¿Probás de nuevo?")
+    
     except KeyboardInterrupt:
-        print(f"\n👋 Chau. Último ID guardado: {last_update_id}")
+        print(f"\n👋 Chau. Último ID: {last_update_id}")
         break
     except Exception as e:
         print(f"⚠️ {e}")

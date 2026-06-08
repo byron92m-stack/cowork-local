@@ -109,7 +109,7 @@ async def send_assistant_message(
     )
     
     try:
-        sys.path.insert(0, "/media/SSD1T/cowork-local")
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         if not os.environ.get("DEEPSEEK_API_KEY"):
             os.environ["DEEPSEEK_API_KEY"] = DEEPSEEK_KEY
         from graph.graph import run_graph, continue_graph

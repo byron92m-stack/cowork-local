@@ -1,5 +1,5 @@
 """Cowork Multi-Agent: Planner(Pro) + OpenCode Workers + Validation + Review + Loop + Redis Memory"""
-import logging, json, subprocess, os, httpx
+import logging, json, os
 from typing import Optional
 from datetime import datetime
 from langgraph.graph import StateGraph, END
@@ -7,80 +7,26 @@ from .state import CoworkState, CodeWorkerState, DesignWorkerState
 from .graph_code import build_code_graph
 from .graph_design import build_design_graph
 from .graph_mcp import build_mcp_graph
-import redis
+from .redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-COWORK_DIR = "/media/SSD1T/cowork-local"
+COWORK_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Redis memoria rápida
-redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+# Redis memoria rápida (shared)
+redis_client = get_redis()
 
-PLANNER_SYSTEM = """You are an AI assistant that executes tasks. Read the request and decide the BEST way.
+PLANNER_SYSTEM = open(os.path.join(os.path.dirname(__file__), "prompts/planner_system.txt")).read()
 
-CLASSIFY the intent first:
-- "code_generation": Create a new Python project, CLI, API, library, or data dashboard (Streamlit, Plotly, data apps)
-- "tool_filesystem": Find, list, count, or search files (includes questions about files, directories, storage)
-- "tool_document": Analyze, modify, or create documents (PDF, Excel)
-- "tool_web": Browse the web, apply to jobs, search
-- "tool_design": Design frontend, landing pages, presentations, UI/UX, visual design, HTML/CSS prototypes (NOT for Streamlit or code-heavy dashboards)
-- "tool_edit": Edit, modify, append to, or delete existing files
-- "tool_shell": Execute commands or scripts
-- "chat": Answer a question, no action needed
-
-EXAMPLES:
-- "¿Cómo listo archivos?" → chat (asking HOW, not executing)
-- "¿Cuántos archivos hay?" → tool_filesystem (asking about files)
-- "¿Qué es Docker?" → chat (knowledge question)
-- "Ejecuta ls -la" → tool_shell (direct command execution)
-- "Corré backup.sh" → tool_shell (script execution)
-- "Buscá PDFs" → tool_filesystem (file search)
-- "Analiza documento.pdf" → tool_document (document analysis)
-- "Leé archivo.txt" → tool_document (read file content)
-- "Modificá README.md" → tool_edit (edit existing file)
-- "Agregá una línea a X.py" → tool_edit (modify file)
-- "Eliminá la función Y de Z.py" → tool_edit (delete code)
-- "Revisa el Excel" → tool_document (spreadsheet analysis)
-- "¿Cómo creo un CLI?" → chat (asking for help)
-- "Creá un CLI" → code_generation (building something)
-- "Creá un dashboard de Bitcoin" → code_generation (data dashboard = Python project)
-- "Haceme un panel de datos" → code_generation (data app = code)
-- "Hola" → chat (greeting)
-- "¿Qué podés hacer?" → chat (capability question)
-- "De esos, ¿cuántos hay?" → chat (user refers to PREVIOUS results in history)
-- "¿Cuál es el más grande?" → chat (user asks about PREVIOUS results)
-- "Explicame eso" → chat (user wants explanation of PREVIOUS results)
-
-RULES:
-- The CURRENT USER MESSAGE determines the project_type. History is context only, not instructions.
-- Classify based on what the user is asking NOW, not what they asked before.
-- If CONVERSATION HISTORY is provided, USE IT. Do NOT search again if the answer is in the history.
-- If user says "De esos", "De esos archivos", "Cuál de esos" → they refer to results in the history. Answer from history.
-- If user asks HOW to do something → chat (they want explanation, not execution)
-- If user asks WHAT is something → chat (knowledge question)
-- If user asks to EXECUTE a specific command → tool_shell
-- If user mentions NEW files/directories not in history → tool_filesystem
-- If user wants to BUILD/CREATE code → code_generation
-- Questions with "?" that ask for information → usually chat
-- When history exists, prefer chat responses based on history over new searches
-
-Output ONLY valid JSON:
-{
-  "project_name": "name",
-  "project_description": "what to do",
-  "project_type": "code_generation|tool_filesystem|tool_document|tool_web|tool_design|tool_edit|tool_shell|chat",
-  "steps": [{"id":1, "agent":"opencode", "task":"specific action"}]
-}
-CRITICAL: If project_type starts with "tool_" or is "chat", DO NOT create a Python project.
-If the user just says hello, asks a question, or chats without requesting an action, use project_type "chat" and respond helpfully."""
+def _get_llm():
+    from models.deepseek_client import DeepSeekClient
+    return DeepSeekClient()
 
 def call_deepseek(system, prompt, json_mode=True):
     try:
-        payload = {"model":"deepseek-chat","messages":[{"role":"system","content":system},{"role":"user","content":prompt}],"max_tokens":4096,"temperature":0.1}
-        if json_mode: payload["response_format"] = {"type":"json_object"}
-        r = httpx.post(DEEPSEEK_URL, json=payload, headers={"Authorization":f"Bearer {DEEPSEEK_KEY}"}, timeout=180)
-        return r.json()["choices"][0]["message"]["content"]
+        client = _get_llm()
+        return client.chat(system=system, prompt=prompt, json_mode=json_mode)
     except Exception as e:
         return '{"error":"%s"}' % str(e)
 
@@ -144,13 +90,14 @@ def design_wrapper(state: CoworkState) -> dict:
     }
 
 
-def task_intake(state): return state.model_dump()
+def task_intake(state: CoworkState) -> dict: return state.model_dump()
 
-def planner(state):
+def planner(state: CoworkState) -> dict:
     logger.info(f"[PLANNER] iter {state.iteration_count+1}/{state.max_iterations}")
     
     # Redis: cachear plan si ya se consultó este prompt
-    cache_key = f"plan:{hash(state.user_query) % 100000}"
+    import hashlib
+    cache_key = f"plan:{hashlib.sha256(state.user_query.encode()).hexdigest()[:16]}"
     if state.iteration_count == 0:
         cached = redis_client.get(cache_key)
         if cached:
@@ -175,7 +122,7 @@ def planner(state):
     
     # Cargar historial de conversación desde Redis
     session_id = state.session_id
-    history = redis_client.lrange(f"chat:{session_id}", 0, -1)
+    history = redis_client.lrange(f"chat:{session_id}", -6, -1)  # Solo últimos 6 mensajes
     if history:
         context = "\n".join(history[-6:])  # Últimos 6 mensajes
         query = f"Conversation history (use this for context):\n{context}\n\nCurrent user message: {state.user_query}"
@@ -195,13 +142,14 @@ def planner(state):
         # Redis: cachear plan por 1 hora
         redis_client.setex(cache_key, 3600, json.dumps(plan))
         logger.info(f"[PLANNER] {len(state.plan)} steps, project={state.metadata['project_name']}")
-    except:
+    except (json.JSONDecodeError, KeyError, Exception) as e:
+        logger.warning(f"Plan parse error: {e}")
         state.add_step(description=state.user_query, assigned_to="executor", step_type="code_generation")
     state.iteration_count += 1
     return state.model_dump()
 
 
-def review(state):
+def review(state: CoworkState) -> dict:
     logger.info("[REVIEW]")
     passed = state.metadata.get("tests_passed", 0)
     failed = state.metadata.get("tests_failed", 0)
@@ -216,7 +164,7 @@ def review(state):
         state.metadata["complete"] = False
     return state.model_dump()
 
-def decision(state):
+def decision(state: CoworkState) -> str:
     if state.metadata.get("complete"):
         logger.info("[DECISION] DONE")
         # Guardar en historial de chat
@@ -229,11 +177,13 @@ def decision(state):
         # Notificar por n8n
         try:
             import requests
+            n8n_token = os.getenv("N8N_WEBHOOK_TOKEN", "")
+            headers = {"Authorization": f"Bearer {n8n_token}"} if n8n_token else {}
             requests.post("http://localhost:5678/webhook/cowork-telegram", json={
                 "project": state.metadata.get("project_name", "proyecto"),
                 "tests": f"{state.metadata.get('tests_passed',0)}/{state.metadata.get('tests_passed',0)+state.metadata.get('tests_failed',0)}",
                 "path": state.metadata.get("last_project_dir", "")
-            }, timeout=5)
+            }, headers=headers, timeout=5)
             logger.info("[DECISION] Notificación enviada a Telegram via n8n")
         except Exception as e:
             logger.warning(f"[DECISION] No se pudo notificar: {e}")
@@ -308,15 +258,15 @@ def get_last_state() -> Optional[dict]:
         data = redis_client.get("cowork:last_state")
         if data:
             return json.loads(data)
-    except:
-        pass
-    return None
+    except Exception as e:
+        logger.warning(f"Redis get_last_state error: {e}")
+        return None
 
 def save_last_state(state_dict: dict) -> None:
     """Guarda el último estado en Redis (TTL 1 hora)."""
     try:
         redis_client.setex("cowork:last_state", 86400, json.dumps(state_dict, default=str))
-    except:
-        pass
+    except Exception as e:
+        logger.warning(f"Redis save_last_state error: {e}")
 
 

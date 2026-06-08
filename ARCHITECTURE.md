@@ -1,4 +1,4 @@
-# Architecture — Cowork-Local v3.4
+# Architecture — Cowork-Local v3.4.1
 
 ## Overview
 
@@ -6,18 +6,18 @@ Multi-agent system with DeepSeek V4 Pro planner and 4 specialized workers via La
 
 ## Multi-Agent Pipeline
 
-Planner uses DeepSeek V4 Pro to classify user intent into 9 types: code_generation, tool_design, tool_filesystem, tool_document, tool_web, tool_edit, tool_shell, booking, chat. Routes to the correct worker via conditional edges.
+Planner uses DeepSeek Reasoner (Pro) to classify user intent into 9 types: code_generation, tool_design, tool_filesystem, tool_document, tool_web, tool_edit, tool_shell, booking, chat. Routes to the correct worker via conditional edges.
 
-Four workers implemented as independent sub-graphs. code_worker uses OpenCode plus Flash FREE to generate Python projects with pytest. Now also generates and EXECUTES scripts automatically. Response format: JSON {"code": "script here"}. clean_code() handles JSON, markdown, and removes non-ASCII characters.
+Four workers implemented as independent sub-graphs. code_worker uses OpenCode CLI with opencode/deepseek-v4-flash to generate Python projects with pytest. Now also generates and EXECUTES scripts automatically. Response format: JSON {"code": "script here"}. clean_code() handles JSON, markdown, and removes non-ASCII characters.
 
 design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards via port 34095.
 
 mail_worker uses Mail.ru SMTP (port 465 SSL) and IMAP (port 993 SSL) to send/receive emails. Tools: mail_send, mail_read, calendar_add (ICS invitations). Auth via app password with 2FA. Config in .env: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT.
 
 
-booking_worker uses LangGraph state machine for medical appointment booking via Telegram and Email. Patient identification by cédula/RUC/passport with validation algorithm. Flow: ID → name+email → intent classification (DeepSeek Flash API with JSON mode) → date (dateparser + Flash confirmation) → time (regex extraction) → confirm. Saves to PostgreSQL (patients, appointments, availability, email_queue, faqs, appointment_history tables). Redis session state keyed by doc_id with 2h TTL. ICS calendar invitations via email queue respecting Mail.ru 1/min rate limit. 24h reminders via APScheduler (Telegram for Telegram users, Email for email users). Security: rate limiting (15 msg/min Telegram, 3/hr email), input sanitization, prompt injection defense. BookingState with channel, user_id, doc_id, step, intent, selected_date, selected_slot.
+booking_worker uses LangGraph state machine for medical appointment booking via Telegram and Email. Patient identification by cédula/RUC/passport with validation algorithm. Flow: ID → name+email → intent classification (deepseek-chat Flash API with JSON mode) → date (dateparser + Flash confirmation) → time (regex extraction) → confirm. Saves to PostgreSQL (patients, appointments, availability, email_queue, faqs, appointment_history tables). Redis session state keyed by doc_id with 2h TTL. ICS calendar invitations via email queue respecting Mail.ru 1/min rate limit. 24h reminders via APScheduler (Telegram for Telegram users, Email for email users). Security: rate limiting (15 msg/min Telegram, 3/hr email), input sanitization, prompt injection defense. BookingState with channel, user_id, doc_id, step, intent, selected_date, selected_slot.
 
-mcp_worker runs 7 local tools: filesystem via os.walk, document via pypdf and pandas (uses state.project_path, extracts ALL pages and ALL text with no limits), web via Playwright, shell via subprocess, chat via OpenCode + Flash FREE, edit via OpenCode + Flash FREE, mail via Mail.ru SMTP/IMAP with app password.
+mcp_worker runs 7 local tools: filesystem via os.walk, document via pypdf and pandas (uses state.project_path, extracts ALL pages and ALL text with no limits), web via Playwright, shell via subprocess, edit via OpenCode (opencode/deepseek-v4-flash, path traversal protected), chat disabled (use codewhale-tui), mail via Mail.ru SMTP/IMAP with app password.
 
 Each worker has its own sub-graph with isolated state. CodeWorkerState for code generation, DesignWorkerState for design tasks. MCP worker shares CoworkState for chat history access.
 
@@ -43,9 +43,9 @@ API endpoint /chat/assistant receives messages from Telegram bot polling every 1
 
 PostgreSQL with 8 Cowork tables (sessions, steps, artifacts, tool usage, errors, project memory, scheduled tasks, invoices) plus 6 booking tables (patients, appointments, availability, email_queue, faqs, appointment_history). Redis for chat history, graph state, planner cache, and session management. n8n on port 5678 with native MCP for workflow automation. Graphify maps the codebase into nodes and edges for architectural awareness. Playwright with Chromium headless in /browsers/ directory. 16 MCP servers in .mcp.json plus n8n-mcp plus postgresql. APScheduler for 24h appointment reminders and email queue processing.
 
-## Security
+## Security (v3.4.1)
 
-API keys in .env excluded from git. Telegram token and API password in environment variables. Chat ID open for patient bookings. doc_id (cédula) as universal patient key across Telegram and Email channels. Confirm flag required for shell and web tools. Rate limiting via Redis. MCP servers use whitelisted paths and read-only modes.
+API keys in .env excluded from git. Shell injection fixed (shlex.split + shell=False). Path traversal protected (os.path.realpath). DB credentials as separate parameters. Webhook n8n token auth support. Redis shared connection pool. Specific exception handling (no bare except). Hardcoded paths replaced with dynamic detection. Telegram token and API password in environment variables. Chat ID open for patient bookings. doc_id (cédula) as universal patient key across Telegram and Email channels. Confirm flag required for shell and web tools. Rate limiting via Redis. MCP servers use whitelisted paths and read-only modes.
 
 ## Hardware
 

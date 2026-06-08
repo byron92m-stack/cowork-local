@@ -32,7 +32,7 @@ class DeepSeekClient:
         self,
         api_key: Optional[str] = None,
         base_url: str = "https://api.deepseek.com/v1",
-        model: str = "deepseek-chat",
+        model: str = "deepseek-reasoner",
         max_tokens: int = 4096,
         temperature: float = 0.1,
     ):

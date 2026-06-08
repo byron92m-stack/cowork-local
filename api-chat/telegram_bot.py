@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 load_dotenv()
 
-sys.path.insert(0, "/media/SSD1T/cowork-local")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-STATE_FILE = "/media/SSD1T/cowork-local/data/telegram_state.txt"
+STATE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "telegram_state.txt")
 AUTHORIZED_CHAT_ID = "8047752200"
 
 # Rate limiting: 15 msg/min por usuario

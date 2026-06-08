@@ -17,7 +17,8 @@ from .booking_db import (
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-redis_client = redis_lib.Redis(host='localhost', port=6379, decode_responses=True)
+from .redis_client import get_redis as _get_redis
+redis_client = _get_redis()
 
 # ─── Prompts ──────────────────────────────────────────────
 EXTRACT_PROMPT = (

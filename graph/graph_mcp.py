@@ -1,16 +1,16 @@
 """Sub-grafo de herramientas MCP (filesystem, document, web, shell, chat)."""
 import logging, subprocess, os, re, asyncio
-import redis as redis_lib
 from langgraph.graph import StateGraph, END
 from .state import CoworkState
+from .redis_client import get_redis
 
 logger = logging.getLogger(__name__)
-COWORK_DIR = "/media/SSD1T/cowork-local"
-redis_client = redis_lib.Redis(host='localhost', port=6379, decode_responses=True)
+COWORK_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+redis_client = get_redis()
 DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 
-def execute_tool(state: CoworkState) -> dict:
+def execute_tool(state: CoworkState) -> dict[str, any]:
     """Ejecuta la herramienta MCP según el project_type."""
     project_type = state.metadata.get("project_type", "chat")
     query = state.user_query
@@ -73,27 +73,31 @@ def execute_tool(state: CoworkState) -> dict:
             filepath = path_match.group(0) if path_match else None
             
             if filepath and os.path.exists(filepath):
-                with open(filepath) as f:
-                    content = f.read()[:2000]
-                
-                edit_prompt = f"File: {filepath}\nCurrent content:\n{content}\n\nTask: {query}\n\nEdit the file to fulfill the task. Return ONLY the complete modified file content."
-                cmd_result = sp.run(
-                    ["opencode", "run", "--model", "opencode/deepseek-v4-flash-free", edit_prompt],
-                    capture_output=True, text=True, timeout=120,
-                    cwd=COWORK_DIR,
-                    env={**os.environ, "DEEPSEEK_API_KEY": DEEPSEEK_KEY}
-                )
-                new_content = cmd_result.stdout.strip()
-                if new_content and len(new_content) > 10:
-                    with open(filepath, 'w') as f:
-                        f.write(new_content)
-                    result = f"✏️ Archivo editado: {filepath}"
+                # Path traversal protection
+                real_path = os.path.realpath(filepath)
+                if not (real_path.startswith("/media/") or real_path.startswith("/home/")):
+                    result = "Acceso denegado: ruta fuera del workspace"
                 else:
-                    result = "❌ No se pudo generar la nueva versión del archivo"
+                    with open(real_path) as f:
+                        file_content = f.read()[:2000]
+                    
+                    edit_prompt = f"File: {filepath}\nCurrent content:\n{file_content}\n\nTask: {query}\n\nEdit the file to fulfill the task. Return ONLY the complete modified file content."
+                    cmd_result = sp.run(
+                        ["opencode", "run", "--model", "opencode/deepseek-v4-flash", edit_prompt],
+                        capture_output=True, text=True, timeout=120,
+                        cwd=COWORK_DIR,
+                        env={**os.environ, "DEEPSEEK_API_KEY": DEEPSEEK_KEY}
+                    )
+                    new_content = cmd_result.stdout.strip()
+                    if new_content and len(new_content) > 10:
+                        with open(real_path, "w") as f:
+                            f.write(new_content)
+                        result = f"Archivo editado: {filepath}"
+                    else:
+                        result = "No se pudo generar la nueva version"
             else:
-                result = "📄 Especifica la ruta completa al archivo a editar"
-        
-        # ─── SHELL ─────────────────────────────────────
+                result = "Especifica la ruta completa al archivo"
+
         elif project_type == "tool_shell":
             qlower = query.lower()
             cmd = query
@@ -104,31 +108,17 @@ def execute_tool(state: CoworkState) -> dict:
             if "run " in qlower:
                 cmd = query.lower().split("run ", 1)[-1].strip()
             cmd = cmd.replace(" --confirm", "").replace("--confirm", "").strip()
-            output = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            import shlex
+            try:
+                args = shlex.split(cmd)
+            except ValueError:
+                args = [cmd]
+            output = subprocess.run(args, shell=False, capture_output=True, text=True, timeout=30)
             result = "💻 Comando ejecutado:\n" + (output.stdout or output.stderr)[:500]
         
-        # ─── CHAT ──────────────────────────────────────
+        # ─── CHAT (desactivado) ────────────────────
         elif project_type == "chat":
-            session_id = state.session_id
-            history = redis_client.lrange(f"chat:{session_id}", 0, -1)
-            if history and len(history) >= 2:
-                context = "\n".join(history[-6:])
-                import httpx
-                r = httpx.post("https://api.deepseek.com/v1/chat/completions", json={
-                    "model": "deepseek-chat",
-                    "messages": [
-                        {"role": "system", "content": "You are a helpful assistant. Answer based on conversation history."},
-                        {"role": "user", "content": f"History:\n{context}\n\nUser: {query}\n\nAnswer:"}
-                    ],
-                    "max_tokens": 500, "temperature": 0.7
-                }, headers={"Authorization": f"Bearer {DEEPSEEK_KEY}"}, timeout=30)
-                if r.status_code == 200:
-                    result = r.json()["choices"][0]["message"]["content"]
-                else:
-                    result = "Lo siento, hubo un error al procesar tu mensaje."
-            else:
-                result = "¡Hola! Soy tu asistente Cowork. Puedo:\n• Buscar archivos en tu PC\n• Crear proyectos Python\n• Analizar documentos\n• Ejecutar comandos\n• Navegar internet\n\n¿En qué te ayudo?"
-        
+            result = "Chat desactivado. Usa codewhale-tui."
         return {
             "reply": result,
             "complete": True,
@@ -141,8 +131,8 @@ def execute_tool(state: CoworkState) -> dict:
         return {
             "reply": f"❌ Error: {str(e)[:200]}",
             "complete": True,
-            "tests_passed": 1,
-            "tests_failed": 0
+            "tests_passed": 0,
+            "tests_failed": 1
         }
 
 

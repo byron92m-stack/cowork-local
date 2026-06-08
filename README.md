@@ -1,7 +1,7 @@
-# Cowork-Local v3.4
+# Cowork-Local v3.4.1
 
 Local multi-agent development assistant with 4 specialized workers running on LangGraph.
-Planner uses DeepSeek V4 Pro. All 4 workers (3 free + 1 low-cost API).
+Planner uses DeepSeek Reasoner (Pro). Workers use opencode/deepseek-v4-flash or deepseek-chat (Flash).
 Total cost: ~$0.50/month. Booking worker adds ~$0.30/month per 1000 appointments.
 
 ## Architecture
@@ -9,7 +9,7 @@ Total cost: ~$0.50/month. Booking worker adds ~$0.30/month per 1000 appointments
 planner (DeepSeek Pro) -> classifies intent -> route_to_worker
   - code_worker -> graph_code.py -> OpenCode + Flash FREE -> Python projects, scripts, PowerPoints
   - design_worker -> graph_design.py -> OpenDesign API (port 34095) -> UI/UX, landing pages
-  - mcp_worker -> graph_mcp.py -> 7 local tools -> filesystem, document, web, shell, chat, edit, mail
+  - mcp_worker -> graph_mcp.py -> 7 local tools -> filesystem, document, web, shell, edit, mail, skills
   - booking_worker -> graph_booking.py -> medical appointment agency (Telegram + Email)
 
 ## Workers
@@ -49,8 +49,8 @@ planner (DeepSeek Pro) -> classifies intent -> route_to_worker
 - document: PDF, Excel, CSV, TXT reading (uses state.project_path)
 - web: navigation with Playwright
 - shell: command execution with --confirm
-- chat: conversation with Redis memory
-- edit: file editing via OpenCode
+- edit: file editing via OpenCode (path traversal protected)
+- chat: disabled (use codewhale-tui for AI chat)
 
 ## PDF Processing (Important)
 - Use project_path parameter, do not include path in query string
@@ -127,6 +127,15 @@ cowork-local/
   rules/                 Rules
   output/archive/        Generated projects
   venv/                  Python 3.13
+
+## Security (v3.4.1)
+- Shell injection: shlex.split() + shell=False
+- Path traversal: os.path.realpath() validation
+- DB credentials: separate parameters, no URL logging
+- Redis: shared connection pool (redis_client.py)
+- Webhook n8n: token authentication support
+- Exception handling: specific exceptions, no bare except
+- Hardcoded paths: dynamic detection via os.path
 
 ## Rules
 

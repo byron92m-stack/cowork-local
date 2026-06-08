@@ -12,7 +12,7 @@ Tool Restrictions: Filesystem MCP whitelisted paths only. Shell MCP whitelisted 
 
 Docker Sandbox: Full container isolation. No network access. Read-only filesystem. Resource limits. No privilege escalation. SELinux compatible.
 
-Prompt Injection Defenses: Pattern-based detection. Input sanitization. Tool argument validation. Length limits on input.
+Prompt Injection Defenses: Pattern-based detection. Input sanitization. Tool argument validation. Length limits on input. JSON mode for structured LLM outputs prevents injection in booking and planner.
 
 Database: Credentials via environment variables only. No default passwords. 8 tables with UUID primary keys and audit timestamps.
 
@@ -22,7 +22,7 @@ Graph Security: LangGraph loop limited to 5 iterations. DeepSeek planner uses JS
 
 Integration Security: Mail.ru and Telegram use dedicated bot accounts (josue.martinez.593@mail.ru, @byron92m_bot), never personal credentials. Calendar uses email invitations via ICS files sent through Mail.ru SMTP, no OAuth tokens stored. All external API calls use environment variables for authentication.
 
-OpenCode Worker Security: OpenCode CLI runs as subprocess with 600 second timeout. Flash FREE model accessed via OpenCode configuration, no direct API key exposure. Worker prompt requests JSON format to avoid markdown injection. clean_code() removes non-ASCII characters and validates output before execution.
+OpenCode Worker Security: OpenCode CLI runs as subprocess with 600 second timeout. opencode/deepseek-v4-flash model accessed via OpenCode CLI, no direct API key exposure. Worker prompt requests JSON format to avoid markdown injection. clean_code() removes non-ASCII characters and validates output before execution.
 
 ## Audit Results May 2026
 
@@ -52,7 +52,7 @@ Patient identification by cédula/RUC/passport with validation algorithm (Ecuado
 
 ## Tool Security
 
-tool_shell and tool_web require --confirm flag for execution. Without confirmation, user receives warning message. --confirm is stripped from actual command before execution. Playwright browsers isolated in /browsers/ directory within project.
+tool_shell uses shlex.split() + shell=False (shell injection fixed). tool_web requires --confirm flag. tool_edit has path traversal protection (os.path.realpath). Without confirmation, user receives warning message. --confirm is stripped from actual command before execution. Playwright browsers isolated in /browsers/ directory within project.
 
 ## Sub-Graph Security
 Each worker runs in its own isolated sub-graph with independent state. code_worker uses CodeWorkerState, design_worker uses DesignWorkerState, mcp_worker shares CoworkState. Sub-graphs cannot access each other state. OpenDesign daemon runs on fixed port 34095 bound to localhost only.
@@ -60,10 +60,25 @@ Each worker runs in its own isolated sub-graph with independent state. code_work
 ## OpenDesign Security
 OpenDesign daemon auto-detects coding agents on PATH. Only connects to localhost. API key passed via environment variable, not stored in OpenDesign config. Design artifacts stored in .od/projects/ directory, gitignored.
 
+## v3.4.1 Security Improvements
+- Shell injection: shlex.split() + shell=False in tool_shell
+- Path traversal: os.path.realpath() validation in tool_edit
+- DB credentials: separate parameters (host/user/password/database), no URL construction
+- Redis: shared connection pool via graph/redis_client.py singleton
+- Exception handling: specific exceptions (no bare except), logger.warning for Redis errors
+- Hardcoded paths: replaced with dynamic os.path.dirname detection
+- Webhook n8n: N8N_WEBHOOK_TOKEN header support
+- Plan cache: hashlib.sha256 instead of non-deterministic hash()
+- History loading: lrange(-6, -1) instead of loading all messages
+- continue_session: resets iteration_count and errors
+- JSON extraction: balanced bracket parser for nested objects
+- MCP chat: disabled (redirects to codewhale-tui)
+- Dead code: graph/nodes/ removed, chat.py deleted
+
 ## Best Practices
 
 Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed paths. Keep Docker sandbox enabled for untrusted code. Rotate API keys periodically. Review worker_prompt.txt before deployment. Use dedicated bot accounts for all integrations.
 
 ## Supported Versions
 
-Version 3.4 with 4 workers via sub-graph architecture + Mail.ru email + Booking Agency (Telegram + Email).
+Version 3.4.1 with 4 workers via sub-graph architecture + Mail.ru email + Booking Agency (Telegram + Email).

@@ -1,7 +1,7 @@
-# Cowork-Local v3.4
+# Cowork-Local v3.4.1
 
 ## Modes
-- **Cowork**: `python apps/cli/cowork_graph.py "task"` — multi-agent, Planner(Pro) + 3 workers (OpenCode/OpenDesign/MCP), 5 iteraciones, timeout 600s
+- **Cowork**: `python apps/cli/cowork_graph.py "task"` — multi-agent, Planner(Pro) + 4 workers (+ Booking), 5 iteraciones, timeout 600s
 - **Code**: `opencode run "prompt"` — OpenCode CLI directo con Flash FREE
 - **Assistant**: Telegram bot (@byron92m_bot)
 
@@ -9,13 +9,15 @@
 LangGraph con sub-grafos independientes:
 - `code_worker` → OpenCode + Flash FREE → Python projects, scripts, PowerPoints
 - `design_worker` → OpenDesign API (port 34095) → UI/UX
-- `mcp_worker` → tools: filesystem, document, web, shell, chat, edit, mail, calendar, skills
+- `mcp_worker` → tools: filesystem, document, web, shell, edit, mail, calendar, skills
 - `booking_worker` → medical appointment booking (Telegram + Email)
 
 ## Models
-- Planner/Reviewer: deepseek-v4-pro
-- Code/Design: opencode/deepseek-v4-flash-free (FREE)
-- MCP chat: deepseek-chat
+- Planner: deepseek-reasoner (Pro)
+- Code: opencode/deepseek-v4-flash
+- MCP edit: opencode/deepseek-v4-flash
+- Booking: deepseek-chat (Flash)
+- MCP chat: disabled (use codewhale-tui)
 
 ## PDF Processing
 - Use `project_path` parameter, not in query string

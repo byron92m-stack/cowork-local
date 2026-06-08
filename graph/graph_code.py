@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, END
 from .state import CodeWorkerState
 
 logger = logging.getLogger(__name__)
-COWORK_DIR = "/media/SSD1T/cowork-local"
+COWORK_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 import re
 
@@ -24,13 +24,21 @@ def clean_code(raw_output):
     except:
         pass
     
-    # Opcion 2: Buscar JSON dentro del texto
+    # Opcion 2: Buscar JSON balanceado (soporta objetos anidados)
     try:
-        json_match = re.search(r"\{[^{}]*\}", raw_output)
-        if json_match:
-            data = json.loads(json_match.group())
-            if "code" in data:
-                return data["code"]
+        start = raw_output.find('{')
+        if start >= 0:
+            depth = 0
+            for i in range(start, len(raw_output)):
+                if raw_output[i] == '{':
+                    depth += 1
+                elif raw_output[i] == '}':
+                    depth -= 1
+                    if depth == 0:
+                        data = json.loads(raw_output[start:i+1])
+                        if "code" in data:
+                            return data["code"]
+                        break
     except:
         pass
     
@@ -43,7 +51,7 @@ def clean_code(raw_output):
     # Opcion 4: Devolver raw
     return raw_output
 
-def code_generate(state: CodeWorkerState) -> dict:
+def code_generate(state: CodeWorkerState) -> dict[str, any]:
     """Genera y EJECUTA código con OpenCode."""
     logger.info(f"[CODE] Generating: {state.query[:80]}...")
     
@@ -66,7 +74,7 @@ Script requirements:
 - Must print "OK" when done"""
         
         result = subprocess.run(
-            ["opencode", "run", "--model", "opencode/deepseek-v4-flash-free", full_prompt],
+            ["opencode", "run", "--model", "opencode/deepseek-v4-flash", full_prompt],
             capture_output=True, text=True, timeout=600,
             cwd=COWORK_DIR,
             env={**os.environ, "DEEPSEEK_API_KEY": os.getenv("DEEPSEEK_API_KEY", "")}

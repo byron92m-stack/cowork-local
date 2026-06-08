@@ -4,10 +4,18 @@ import asyncpg
 from typing import Optional, List, Dict
 from datetime import datetime, date, time
 
-DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER','cowork')}:{os.getenv('POSTGRES_PASSWORD','coworkpass')}@{os.getenv('POSTGRES_HOST','localhost')}:{os.getenv('POSTGRES_PORT','5432')}/{os.getenv('POSTGRES_DB','coworkdb')}"
+DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+DB_PORT = os.getenv('POSTGRES_PORT', '5432')
+DB_USER = os.getenv('POSTGRES_USER', 'cowork')
+DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'coworkpass')
+DB_NAME = os.getenv('POSTGRES_DB', 'coworkdb')
 
 async def get_pool():
-    return await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
+    return await asyncpg.create_pool(
+        host=DB_HOST, port=DB_PORT, user=DB_USER,
+        password=DB_PASSWORD, database=DB_NAME,
+        min_size=1, max_size=5
+    )
 
 # ─── Pacientes ──────────────────────────────────────────────
 async def get_or_create_patient(pool, channel: str, user_id: str, full_name: str = None, email: str = None) -> dict:

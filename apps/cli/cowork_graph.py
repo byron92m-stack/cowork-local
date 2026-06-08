@@ -1,7 +1,7 @@
 """Cowork: Ejecuta el grafo LangGraph completo."""
 import sys, os, json, logging, redis
 
-sys.path.insert(0, "/media/SSD1T/cowork-local")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DEEPSEEK_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")

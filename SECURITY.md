@@ -18,21 +18,23 @@ Database: Credentials via environment variables only. No default passwords. 8 ta
 
 File Watcher Security: Monitors specified directories only. Filters by file extension. Ignores temp files. Auto-execution disabled by default.
 
-Graph Security: LangGraph loop limited to 5 iterations. DeepSeek planner uses JSON mode with response_format json_object. OpenCode worker runs via subprocess with timeout protection. Validation runs pytest in subprocess. Multi-file generation with path sanitization. Auto-install and auto-tests with timeout protection.
+Graph Security: LangGraph loop limited to 5 iterations. DeepSeek planner uses JSON mode with response_format json_object. OpenCode and CodeWhale workers run via subprocess with timeout protection. Multi-worker flows share COWORK_DIR as cwd for collaboration. Validation runs pytest in subprocess. Multi-file generation with path sanitization. Auto-install and auto-tests with timeout protection.
 
 Integration Security: Mail.ru and Telegram use dedicated bot accounts (josue.martinez.593@mail.ru, @byron92m_bot), never personal credentials. Calendar uses email invitations via ICS files sent through Mail.ru SMTP, no OAuth tokens stored. All external API calls use environment variables for authentication.
 
-OpenCode Worker Security: OpenCode CLI runs as subprocess with 600 second timeout. opencode/deepseek-v4-flash model accessed via OpenCode CLI, no direct API key exposure. Worker prompt requests JSON format to avoid markdown injection. clean_code() removes non-ASCII characters and validates output before execution.
+OpenCode Worker Security: OpenCode CLI runs as subprocess with 600 second timeout. deepseek/deepseek-v4-flash model accessed via DeepSeek API direct, not OpenCode hosted. Worker uses agent mode with native tools (Read, Write, Glob, Shell). Both workers share COWORK_DIR as cwd for full project visibility.
+
+CodeWhale Worker Security: CodeWhale runs as subprocess with 120 second timeout in agent mode (exec --auto). deepseek-v4-flash model via DeepSeek API direct. Binary at workers/codewhale/codewhale with dynamic path detection.
 
 ## Audit Results May 2026
 
-Zero API keys committed. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in dotenv excluded from Git. Project unified into single folder. Anthropic proxy removed, reducing attack surface. OpenCode CLI direct integration eliminates proxy translation layer.
+Zero API keys committed. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in dotenv excluded from Git. Project unified into single folder. Anthropic proxy removed, reducing attack surface. OpenCode CLI direct integration eliminates proxy translation layer. Workers consolidated in workers/ directory.
 
 ## PDF Processing Security
 PDF files read via pypdf with no shell execution. Extracted text sanitized. No PDF rendering or JavaScript execution. Path validated before access.
 
 ## Code Generation Security
-Generated scripts saved to output/projects/ directory. Scripts executed via subprocess.run with timeout. Output captured, not printed directly to terminal. JSON validation before script extraction. Non-ASCII characters removed to prevent injection.
+Generated scripts saved to output/projects/ directory. OpenCode uses agent mode with native tools — no forced JSON format. Scripts executed via subprocess.run with timeout. Main script auto-detected from generated files (prioritizes main.py, app.py, or largest .py file). Output captured, not printed directly to terminal.
 
 ## Redis Security
 Redis runs locally without password on port 6379. Not exposed externally. Booking sessions keyed by doc_id with 2h TTL. Keys have TTL (5 minutes to 1 hour) to auto-expire and prevent memory buildup. No sensitive data stored permanently in Redis.
@@ -55,10 +57,16 @@ Patient identification by cédula/RUC/passport with validation algorithm (Ecuado
 tool_shell uses shlex.split() + shell=False (shell injection fixed). tool_web requires --confirm flag. tool_edit has path traversal protection (os.path.realpath). Without confirmation, user receives warning message. --confirm is stripped from actual command before execution. Playwright browsers isolated in /browsers/ directory within project.
 
 ## Sub-Graph Security
-Each worker runs in its own isolated sub-graph with independent state. code_worker uses CodeWorkerState, design_worker uses DesignWorkerState, mcp_worker shares CoworkState. Sub-graphs cannot access each other state. OpenDesign daemon runs on fixed port 34095 bound to localhost only.
+Each worker runs in its own isolated sub-graph with independent state. code_worker uses CodeWorkerState, design_worker uses DesignWorkerState, codewhale_worker shares CoworkState. Sub-graphs cannot access each other state. OpenDesign daemon runs on fixed port 34095 bound to localhost only.
 
 ## OpenDesign Security
-OpenDesign daemon auto-detects coding agents on PATH. Only connects to localhost. API key passed via environment variable, not stored in OpenDesign config. Design artifacts stored in .od/projects/ directory, gitignored.
+OpenDesign daemon auto-detects coding agents on PATH. Only connects to localhost. API key passed via environment variable, not stored in OpenDesign config. Design artifacts stored in .od/projects/ directory, gitignored. Daemon located at workers/open-design/.
+
+## Workers Directory Security
+All worker binaries and services consolidated in workers/:
+- workers/codewhale/ — CodeWhale TUI binary with dynamic path detection
+- workers/opencode-pro/ — Reserved for future assistant, currently empty
+- workers/open-design/ — OpenDesign daemon, gitignored artifacts
 
 ## v3.4.1 Security Improvements
 - Shell injection: shlex.split() + shell=False in tool_shell
@@ -81,4 +89,4 @@ Never commit dotenv file. Use strong PostgreSQL passwords. Review MCP allowed pa
 
 ## Supported Versions
 
-Version 3.4.1 with 4 workers via sub-graph architecture + Mail.ru email + Booking Agency (Telegram + Email).
+Version 3.4.1 with 4 workers via sub-graph architecture + Mail.ru email + Booking Agency (Telegram + Email). Workers consolidated in workers/ directory.

@@ -1,36 +1,38 @@
 # Cowork-Local v3.4.1
 
 Local multi-agent development assistant with 4 specialized workers running on LangGraph.
-Planner uses DeepSeek Reasoner (Pro). Workers use opencode/deepseek-v4-flash or deepseek-chat (Flash).
+Planner uses DeepSeek Reasoner (Pro). Workers use deepseek/deepseek-v4-flash (API direct) or deepseek-chat (Flash).
 Total cost: ~$0.50/month. Booking worker adds ~$0.30/month per 1000 appointments.
 
 ## Architecture
 
 planner (DeepSeek Pro) -> classifies intent -> route_to_worker
-  - code_worker -> graph_code.py -> OpenCode + Flash FREE -> Python projects, scripts, PowerPoints
+  - code_worker -> graph_code.py -> OpenCode (agent mode with tools) -> Python projects, scripts, PowerPoints
   - design_worker -> graph_design.py -> OpenDesign API (port 34095) -> UI/UX, landing pages
-  - mcp_worker -> graph_mcp.py -> 7 local tools -> filesystem, document, web, shell, edit, mail, skills
+  - codewhale_worker -> graph_codewhale.py -> CodeWhale (agent mode --auto) -> filesystem, document, web, shell, edit, search
   - booking_worker -> graph_booking.py -> medical appointment agency (Telegram + Email)
 
 ## Workers
 
 ### code_worker
-- Generates and EXECUTES Python code automatically
-- Response format: JSON {"code": "script here"}
-- clean_code() handles JSON, markdown and non-ASCII characters
-- Projects include tests (pytest) when applicable
+- Generates and EXECUTES Python code automatically using OpenCode in agent mode
+- OpenCode uses native tools (Read, Write, Glob, Shell) to create complete projects
+- No forced JSON format — OpenCode decides how to solve the task
+- Generated files go to output/projects/{project_name}/
+- Both workers share COWORK_DIR as cwd for full project visibility
+- Scripts include tests (pytest) when applicable
+
+### codewhale_worker
+- Replaces the old mcp_worker with 30+ tools via CodeWhale in agent mode (--auto)
+- Tools: filesystem search, document analysis, web navigation, shell execution, file editing
+- Chat disabled (redirects to codewhale-tui for interactive AI chat)
+- Works in COWORK_DIR with full project access
 
 ### design_worker
 - OpenDesign daemon on port 34095
 - Generates web prototypes, landing pages, UI/UX
 - Healthcheck before calling
-
-### mail_worker
-- mail_send: Send emails via Mail.ru SMTP
-- mail_read: Read inbox via IMAP
-- calendar_add: Send .ics invitations
-- Config: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT
-
+- Daemon path: workers/open-design/
 
 ### booking_worker
 - Medical appointment booking agency
@@ -44,13 +46,11 @@ planner (DeepSeek Pro) -> classifies intent -> route_to_worker
 - Commands: /start, /citas, /cancelar, /ayuda, /reset
 - Security: rate limiting, input sanitization, doc_id as universal patient key
 
-### mcp_worker
-- filesystem: file search with os.walk
-- document: PDF, Excel, CSV, TXT reading (uses state.project_path)
-- web: navigation with Playwright
-- shell: command execution with --confirm
-- edit: file editing via OpenCode (path traversal protected)
-- chat: disabled (use codewhale-tui for AI chat)
+### mail_worker
+- mail_send: Send emails via Mail.ru SMTP
+- mail_read: Read inbox via IMAP
+- calendar_add: Send .ics invitations
+- Config: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT
 
 ## PDF Processing (Important)
 - Use project_path parameter, do not include path in query string
@@ -59,9 +59,10 @@ planner (DeepSeek Pro) -> classifies intent -> route_to_worker
 - For long content: save to file and reference path
 
 ## Code Generation
-- Prompt must request JSON: {"code": "script here"}
-- clean_code() extracts code from JSON or markdown
-- Removes non-ASCII characters (em dash, smart quotes, accents)
+- OpenCode uses agent mode with native tools (Read, Write, Glob, Shell)
+- No JSON format required — model decides the best approach
+- Generated files are saved in output/projects/{project_name}/
+- Main script is auto-detected (prioritizes main.py, app.py, or largest .py file)
 - Script is saved AND executed automatically
 
 ## Installation
@@ -89,7 +90,7 @@ Start Telegram bot:
 python api-chat/telegram_bot.py
 
 Start OpenDesign daemon:
-cd /media/SSD1T/open-design && pnpm tools-dev run web --daemon-port 34095 --web-port 45125 &
+cd workers/open-design && pnpm tools-dev run web --daemon-port 34095 --web-port 45125 &
 
 Use Cowork:
 python apps/cli/cowork_graph.py "Create a CLI with --name flag"
@@ -110,7 +111,7 @@ Security: rate limiting (15 msg/min), input sanitization, prompt injection defen
 8 intent types (7 Cowork + booking):
 - code_generation -> code_worker
 - tool_design -> design_worker
-- tool_filesystem, tool_document, tool_web, tool_shell, chat -> mcp_worker
+- tool_filesystem, tool_document, tool_web, tool_shell, tool_edit, chat -> codewhale_worker
 - booking -> booking_worker
 
 6 projects with 100% tests: webreq, logview, gitstat, tcpdump-cli, ai-reviewer, graph-report
@@ -119,13 +120,17 @@ Security: rate limiting (15 msg/min), input sanitization, prompt injection defen
 
 cowork-local/
   api-chat/              FastAPI + Telegram bot
-  graph/                 LangGraph (4 sub-graphs)
   apps/cli/              CLI tools
-  tools/mcp/             16 MCP servers
+  graph/                 LangGraph (4 sub-graphs)
+  workers/               Worker binaries and services
+    codewhale/           CodeWhale TUI binary (Flash, 30+ tools)
+    opencode-pro/        Reserved for future OpenCode Pro assistant
+    open-design/         OpenDesign daemon (UI/UX generation)
+  tools/                 MCP servers and email tools
   infra/                 Docker Compose
   agents/                Sub-agents
   rules/                 Rules
-  output/archive/        Generated projects
+  output/projects/       Generated projects
   venv/                  Python 3.13
 
 ## Security (v3.4.1)

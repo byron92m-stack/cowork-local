@@ -2,26 +2,27 @@
 
 ## Overview
 
-Multi-agent system with DeepSeek V4 Pro planner and 4 specialized workers via LangGraph sub-graph architecture. 7 real tools + booking agency. 16 MCP Servers. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence. 6 projects 100 percent tests. Cost approximately 0.50 dollars per month. Booking worker adds ~0.30/month per 1000 appointments.
+Multi-agent system with DeepSeek V4 Pro planner and 4 specialized workers via LangGraph sub-graph architecture. 30+ tools via CodeWhale + OpenCode agent mode. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence. 6 projects 100 percent tests. Cost approximately 0.50 dollars per month. Booking worker adds ~0.30/month per 1000 appointments.
 
 ## Multi-Agent Pipeline
 
 Planner uses DeepSeek Reasoner (Pro) to classify user intent into 9 types: code_generation, tool_design, tool_filesystem, tool_document, tool_web, tool_edit, tool_shell, booking, chat. Routes to the correct worker via conditional edges.
 
-Four workers implemented as independent sub-graphs. code_worker uses OpenCode CLI with opencode/deepseek-v4-flash to generate Python projects with pytest. Now also generates and EXECUTES scripts automatically. Response format: JSON {"code": "script here"}. clean_code() handles JSON, markdown, and removes non-ASCII characters.
+Four workers implemented as independent sub-graphs. Both code_worker and codewhale_worker share COWORK_DIR as cwd for full project visibility.
 
-design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards via port 34095.
+code_worker uses OpenCode CLI with deepseek/deepseek-v4-flash (API direct) in agent mode with native tools (Read, Write, Glob, Shell). Generates Python projects with pytest. No forced JSON format — OpenCode decides how to solve the task. Generated files go to output/projects/{project_name}/. Main script auto-detected (prioritizes main.py, app.py, or largest .py file). Script is saved AND executed automatically.
 
-mail_worker uses Mail.ru SMTP (port 465 SSL) and IMAP (port 993 SSL) to send/receive emails. Tools: mail_send, mail_read, calendar_add (ICS invitations). Auth via app password with 2FA. Config in .env: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT.
+codewhale_worker replaces the old mcp_worker. Uses CodeWhale in agent mode (exec --auto) with 30+ tools: filesystem search, document analysis, web navigation, shell execution, file editing. Chat disabled (redirects to codewhale-tui for interactive AI chat). Works in COWORK_DIR with full project access.
 
+design_worker uses OpenDesign API to generate UI, UX, landing pages, and dashboards via port 34095. Daemon located at workers/open-design/.
 
 booking_worker uses LangGraph state machine for medical appointment booking via Telegram and Email. Patient identification by cédula/RUC/passport with validation algorithm. Flow: ID → name+email → intent classification (deepseek-chat Flash API with JSON mode) → date (dateparser + Flash confirmation) → time (regex extraction) → confirm. Saves to PostgreSQL (patients, appointments, availability, email_queue, faqs, appointment_history tables). Redis session state keyed by doc_id with 2h TTL. ICS calendar invitations via email queue respecting Mail.ru 1/min rate limit. 24h reminders via APScheduler (Telegram for Telegram users, Email for email users). Security: rate limiting (15 msg/min Telegram, 3/hr email), input sanitization, prompt injection defense. BookingState with channel, user_id, doc_id, step, intent, selected_date, selected_slot.
 
-mcp_worker runs 7 local tools: filesystem via os.walk, document via pypdf and pandas (uses state.project_path, extracts ALL pages and ALL text with no limits), web via Playwright, shell via subprocess, edit via OpenCode (opencode/deepseek-v4-flash, path traversal protected), chat disabled (use codewhale-tui), mail via Mail.ru SMTP/IMAP with app password.
+mail_worker uses Mail.ru SMTP (port 465 SSL) and IMAP (port 993 SSL) to send/receive emails. Tools: mail_send, mail_read, calendar_add (ICS invitations). Auth via app password with 2FA. Config in .env: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT.
 
-Each worker has its own sub-graph with isolated state. CodeWorkerState for code generation, DesignWorkerState for design tasks. MCP worker shares CoworkState for chat history access.
+Each worker has its own sub-graph with isolated state. CodeWorkerState for code generation, DesignWorkerState for design tasks. Codewhale worker shares CoworkState for chat history access.
 
-Review evaluates completeness. If tests pass or tool completes, marks done. Decision routes to planner for retry or END. Saves conversation history to Redis. Maximum 5 iterations.
+Review evaluates completeness. If tests pass or tool completes, marks done. Decision routes to planner for retry or END. Saves conversation history to Redis. Maximum 5 iterations. Multi-worker flows supported: codewhale can search files, code_worker can generate scripts using that context in subsequent iterations.
 
 ## PDF Processing (Updated)
 
@@ -29,11 +30,18 @@ tool_document now prioritizes state.project_path over searching in user_query. E
 
 ## Code Generation (Updated)
 
-Prompt requests JSON format: {"code": "the complete Python script here"}. clean_code() extracts code from JSON or markdown blocks. Removes non-ASCII characters (em dash, smart quotes, accents). Script is saved AND executed automatically. Output captured in reply.
+OpenCode uses agent mode with native tools (Read, Write, Glob, Shell). No forced JSON format — model decides the best approach. Generated files saved in output/projects/{project_name}/. Main script auto-detected (prioritizes main.py, app.py, or largest .py file). Script is saved AND executed automatically. Both workers share COWORK_DIR as cwd for full project visibility.
 
 ## Sub-Graph Architecture
 
-Main graph in graph.py contains planner, review, and decision nodes. Four sub-graphs: graph_code.py with CodeWorkerState, graph_design.py with DesignWorkerState, graph_mcp.py with CoworkState. graph_booking.py with BookingState. All state definitions in state.py.
+Main graph in graph.py contains planner, review, and decision nodes. Four sub-graphs: graph_code.py with CodeWorkerState, graph_design.py with DesignWorkerState, graph_codewhale.py with CoworkState. graph_booking.py with BookingState. All state definitions in state.py.
+
+## Workers Directory
+
+All worker binaries and services consolidated in workers/:
+- workers/codewhale/ — CodeWhale TUI binary (Flash, 30+ tools)
+- workers/opencode-pro/ — Reserved for future OpenCode Pro assistant
+- workers/open-design/ — OpenDesign daemon (UI/UX generation)
 
 ## Telegram Assistant
 
@@ -53,4 +61,4 @@ Fedora 43. AMD Ryzen Starship Matisse. NVIDIA RTX 4060 Ti 16GB VRAM. 32GB RAM. N
 
 ## Monthly Cost
 
-DeepSeek API approximately 0.50 dollars per month for intensive usage across all models. All other components free and open-source including LangGraph, OpenCode CLI, FastAPI, Streamlit, PostgreSQL, Docker, Ollama, and 16 MCP servers. Hardware already owned. Total approximately 0.50 dollars per month. Booking agency adds ~0.30 dollars per 1000 appointments (DeepSeek Flash API for intent classification and conversation).
+DeepSeek API approximately 0.50 dollars per month for intensive usage across all models. All other components free and open-source including LangGraph, OpenCode CLI, CodeWhale, FastAPI, Streamlit, PostgreSQL, Docker, Ollama, and 16 MCP servers. Hardware already owned. Total approximately 0.50 dollars per month. Booking agency adds ~0.30 dollars per 1000 appointments (DeepSeek Flash API for intent classification and conversation).

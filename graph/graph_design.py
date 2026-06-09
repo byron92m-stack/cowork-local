@@ -19,7 +19,7 @@ def design_generate(state: DesignWorkerState) -> dict:
                 raise Exception("Daemon health check failed")
         except Exception:
             return {
-                "reply": "❌ OpenDesign daemon no está corriendo. Inicialo con:\ncd /media/SSD1T/open-design && pnpm tools-dev run web --daemon-port 34095 --web-port 45125",
+                "reply": "❌ OpenDesign daemon no está corriendo. Inicialo con:\ncd /media/SSD1T/cowork-local/workers/open-design && pnpm tools-dev run web --daemon-port 34095 --web-port 45125",
                 "complete": True,
                 "error": "Daemon offline"
             }

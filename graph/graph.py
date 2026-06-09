@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph, END
 from .state import CoworkState, CodeWorkerState, DesignWorkerState
 from .graph_code import build_code_graph
 from .graph_design import build_design_graph
-from .graph_mcp import build_mcp_graph
+from .graph_codewhale import build_codewhale_graph
 from .redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -31,20 +31,6 @@ def call_deepseek(system, prompt, json_mode=True):
         return '{"error":"%s"}' % str(e)
 
 
-
-def mcp_wrapper(state: CoworkState) -> dict:
-    """Wrapper que ejecuta el sub-grafo MCP y mapea resultados."""
-    result = build_mcp_graph().invoke(state)
-    return {
-        "reply": result.get("reply", "Tarea completada"),
-        "metadata": {
-            **state.metadata,
-            "tests_passed": result.get("tests_passed", 1),
-            "tests_failed": result.get("tests_failed", 0),
-            "complete": result.get("complete", True)
-        },
-        "artifacts": [{"type": "log", "content": result.get("reply", "")}]
-    }
 
 
 def code_wrapper(state: CoworkState) -> dict:
@@ -72,6 +58,19 @@ def code_wrapper(state: CoworkState) -> dict:
         "artifacts": [{"type": "log", "content": result["reply"]}]
     }
 
+
+def codewhale_wrapper(state: CoworkState) -> dict:
+    result = build_codewhale_graph().invoke(state)
+    return {
+        "reply": result.get("reply", "Tarea completada"),
+        "metadata": {
+            **state.metadata,
+            "tests_passed": result.get("tests_passed", 1),
+            "tests_failed": result.get("tests_failed", 0),
+            "complete": result.get("complete", True)
+        },
+        "artifacts": [{"type": "log", "content": result.get("reply", "")}]
+    }
 
 def design_wrapper(state: CoworkState) -> dict:
     """Wrapper que ejecuta el sub-grafo de diseño y mapea resultados."""
@@ -205,7 +204,7 @@ def build_graph():
     workflow.add_node("planner", planner)
     workflow.add_node("code_worker", code_wrapper)
     workflow.add_node("design_worker", design_wrapper)
-    workflow.add_node("mcp_worker", mcp_wrapper)
+    workflow.add_node("codewhale_worker", codewhale_wrapper)
     workflow.add_node("review", review)
     
     workflow.set_entry_point("intake")
@@ -216,18 +215,18 @@ def build_graph():
         if pt == "tool_design":
             return "design_worker"
         elif pt.startswith("tool_") or pt == "chat":
-            return "mcp_worker"
+            return "codewhale_worker"
         else:
             return "code_worker"
     
     workflow.add_conditional_edges(
         "planner", route_to_worker,
-        {"code_worker": "code_worker", "design_worker": "design_worker", "mcp_worker": "mcp_worker"}
+        {"code_worker": "code_worker", "design_worker": "design_worker", "codewhale_worker": "codewhale_worker"}
     )
     
     workflow.add_edge("code_worker", "review")
     workflow.add_edge("design_worker", "review")
-    workflow.add_edge("mcp_worker", "review")
+    workflow.add_edge("codewhale_worker", "review")
     workflow.add_conditional_edges("review", decision, {"planner": "planner", END: END})
     
     return workflow.compile()

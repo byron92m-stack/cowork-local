@@ -1,4 +1,4 @@
-# Cowork-Local v3.2 Dependencies
+# Cowork-Local v3.4.1 Dependencies
 # Core
 langgraph
 pydantic
@@ -7,18 +7,39 @@ redis
 psycopg2-binary
 python-dotenv
 
+# DeepSeek API
+openai
+
 # API
 fastapi
 uvicorn
-sqlalchemy
+python-multipart
+
+# Auth
+passlib[bcrypt]
+pyjwt
+
+# Database
+asyncpg
+
+# Booking
+apscheduler
+dateparser
+yagmail
+nest-asyncio
 
 # Tools
 pypdf
 openpyxl
 pandas
 playwright
+pyyaml
+requests
 
-# Optional
+# UI
+streamlit
+
+# Output
 matplotlib
 reportlab
 python-pptx

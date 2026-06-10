@@ -11,26 +11,6 @@ from uuid import uuid4
 from datetime import datetime
 
 
-# ─── Paso individual del plan ───────────────────────────────────────
-class Step(BaseModel):
-    """Representa un paso en el plan de ejecución."""
-    id: str = Field(default_factory=lambda: str(uuid4()))
-    description: str = Field(..., description="Descripción de la tarea a realizar")
-    status: Literal["pending", "in_progress", "done", "failed"] = "pending"
-    assigned_to: Optional[Literal["supervisor", "executor", "tools"]] = Field(
-        default=None,
-        description="Quién debe ejecutar este paso"
-    )
-    step_type: Optional[Literal["analysis", "code_generation", "review", "tool_call"]] = Field(
-        default=None,
-        description="Tipo de tarea"
-    )
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    
-    class Config:
-        use_enum_values = True
-
-
 # ─── Artefacto generado ─────────────────────────────────────────────
 class Artifact(BaseModel):
     """Resultado de un paso de ejecución."""
@@ -64,9 +44,7 @@ class CoworkState(BaseModel):
     user_query: str = Field(default="", description="La consulta original del usuario")
     project_path: str = Field(default="", description="Ruta del proyecto a analizar")
     
-    # Plan y ejecución
-    plan: List[Step] = Field(default_factory=list)
-    current_step_id: Optional[str] = Field(default=None)
+    # Ejecución
     iteration_count: int = Field(default=0)
     max_iterations: int = Field(default=10)
     
@@ -101,27 +79,7 @@ class CoworkState(BaseModel):
         arbitrary_types_allowed = True
 
     # ─── Helpers ─────────────────────────────────────────────────
-    def add_step(self, description: str, assigned_to: str, step_type: str) -> Step:
-        """Agrega un paso al plan y lo devuelve."""
-        step = Step(
-            description=description,
-            assigned_to=assigned_to,
-            step_type=step_type
-        )
-        self.plan.append(step)
-        return step
-
-    def get_pending_steps(self) -> List[Step]:
-        """Devuelve los pasos pendientes."""
-        return [s for s in self.plan if s.status == "pending"]
-
-    def get_current_step(self) -> Optional[Step]:
-        """Devuelve el paso actual si existe."""
-        if self.current_step_id:
-            for step in self.plan:
-                if step.id == self.current_step_id:
-                    return step
-        return None
+    # add_step() removed - dead code (Phase 35 cleanup)
 
     def add_artifact(self, artifact_type: str, content: str, path: str = None) -> Artifact:
         """Agrega un artefacto y lo devuelve."""
@@ -143,23 +101,9 @@ class CoworkState(BaseModel):
         self.iteration_count = 0  # Reiniciar para nueva query
         self.errors = []  # Limpiar errores de sesión anterior
     
-    def is_complete(self) -> bool:
-        """Verifica si todos los pasos están terminados (done o failed)."""
-        if len(self.plan) == 0:
-            return False
-        # Verificar que no haya pasos pending o in_progress
-        active_steps = [s for s in self.plan if s.status in ("pending", "in_progress")]
-        return len(active_steps) == 0
+    # is_complete() removed - dead code (Phase 35 cleanup)
 
-    def summary(self) -> str:
-        """Devuelve un resumen del estado actual."""
-        return (
-            f"Session: {self.session_id[:8]}... | "
-            f"Steps: {len([s for s in self.plan if s.status == 'done'])}/{len(self.plan)} done | "
-            f"Artifacts: {len(self.artifacts)} | "
-            f"Errors: {len(self.errors)} | "
-            f"Iteration: {self.iteration_count}/{self.max_iterations}"
-        )
+
 
 # ─── Estado del Worker de Código (OpenCode) ────────────────────────
 class CodeWorkerState(BaseModel):

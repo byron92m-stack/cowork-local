@@ -64,6 +64,7 @@ def _state_key(state_dict):
     return f"booking:tmp:{channel}:{user_id}"
 
 def save_booking_state(state_dict):
+    """Guarda estado de booking en Redis (sync, llamado desde async con loop.run_in_executor)."""
     channel = state_dict.get('channel', 'telegram')
     user_id = state_dict.get('user_id', 'unknown')
     # Siempre guardar sesion temporal por canal
@@ -76,6 +77,18 @@ def save_booking_state(state_dict):
     if doc and not doc.startswith('tmp:'):
         key_doc = f"booking:doc:{doc}"
         redis_client.setex(key_doc, 7200, json.dumps(state_dict, default=str))
+
+async def save_booking_state_async(state_dict):
+    """Versión async de save_booking_state."""
+    import asyncio
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, save_booking_state, state_dict)
+
+async def delete_booking_state_async(*keys):
+    """Versión async de redis_client.delete()."""
+    import asyncio
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, lambda: [redis_client.delete(k) for k in keys])
 
 def load_booking_state(doc_id=None, channel=None, user_id=None):
     if doc_id:
@@ -137,8 +150,8 @@ async def booking_router(state: BookingState) -> dict:
         async with pool.acquire() as conn:
             await conn.execute("UPDATE patients SET telegram_chat_id=NULL WHERE id=$1", str(patient['id']))
         if old_doc:
-            redis_client.delete(f"booking:doc:{old_doc}")
-        redis_client.delete(f"booking:tmp:{state.channel}:{state.user_id}")
+            await delete_booking_state_async(f"booking:doc:{old_doc}")
+        await delete_booking_state_async(f"booking:tmp:{state.channel}:{state.user_id}")
         new_patient = await get_or_create_patient(pool, state.channel, state.user_id)
         return {"patient_id": str(new_patient['id']), "step": "ask_doc", "intent": "chat",
                 "reply": "Identidad cambiada. " + WELCOME_TEXT, "history": []}
@@ -415,6 +428,6 @@ async def run_booking(channel, user_id, message, history=None):
             result['doc_id'] = patient['doc_id']
     result['channel'] = channel
     result['user_id'] = user_id
-    save_booking_state(result)
+    await save_booking_state_async(result)
     final = BookingState(**result)
     return final

@@ -191,11 +191,12 @@ if query := st.chat_input("¿Qué querés hacer? Ej: Analiza los archivos Python
                 
                 if final_state:
                     # Construir respuesta final
-                    steps_done = len([s for s in final_state.plan if s.status == "done"])
-                    total = len(final_state.plan)
+                    tests_passed = final_state.metadata.get("tests_passed", 0)
+                    tests_failed = final_state.metadata.get("tests_failed", 0)
+                    total = tests_passed + tests_failed
                     
                     response = f"### ✅ Tarea completada\n\n"
-                    response += f"**{steps_done}/{total} pasos** | "
+                    response += f"**{tests_passed}/{total} tests** | "
                     response += f"**{len(final_state.artifacts)} artefactos** | "
                     response += f"**{len(final_state.errors)} errores**\n\n"
                     
@@ -221,24 +222,21 @@ if query := st.chat_input("¿Qué querés hacer? Ej: Analiza los archivos Python
                     
                     # Guardar en PostgreSQL automáticamente
                     from tools.python_tools.db_tools import (
-                        create_session, save_all_steps, save_artifact, update_session_status
+                        create_session, save_artifact, update_session_status
                     )
                     create_session(
                         session_id=final_state.session_id,
                         user_query=query,
                         project_path=project,
                     )
-                    steps_data = [{"id": s.id, "description": s.description, 
-                                   "status": s.status, "assigned_to": s.assigned_to,
-                                   "metadata": s.metadata} for s in final_state.plan]
-                    save_all_steps(final_state.session_id, steps_data)
+                    # Steps removed — nothing to save
                     for art in final_state.artifacts:
                         save_artifact(final_state.session_id, {
                             "id": art.id, "type": art.type, 
                             "content": art.content, "metadata": art.metadata
                         })
                     update_session_status(final_state.session_id, 
-                        "completed" if final_state.is_complete() else "in_progress")
+                        "completed" if final_state.metadata.get("complete") else "in_progress")
                     
                     st.success(f"💾 Sesión `{final_state.session_id[:8]}...` guardada en PostgreSQL")
                 

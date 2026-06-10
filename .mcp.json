@@ -72,14 +72,6 @@
       ],
       "env": {}
     },
-    "googledrive": {
-      "command": "python",
-      "args": [
-        "-m",
-        "tools.mcp.googledrive.server"
-      ],
-      "env": {}
-    },
     "notion": {
       "command": "python",
       "args": [

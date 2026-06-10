@@ -156,7 +156,7 @@ def cmd_run(args):
         print("📋 RESULTADO FINAL")
         print("="*60)
         print(f"Session: {final_state.session_id}")
-        print(f"Pasos completados: {len([s for s in final_state.plan if s.status == 'done'])}/{len(final_state.plan)}")
+        print(f"Tests: {final_state.metadata.get('tests_passed', 0)} passed, {final_state.metadata.get('tests_failed', 0)} failed")
         print(f"Artefactos generados: {len(final_state.artifacts)}")
         print(f"Errores: {len(final_state.errors)}")
         

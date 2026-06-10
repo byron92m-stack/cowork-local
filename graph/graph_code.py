@@ -1,5 +1,6 @@
 """Sub-grafo del worker OpenCode (modo agente --auto)."""
-import logging, subprocess, os, glob as globmod
+import logging, subprocess, os, sys, glob as globmod
+from typing import Any
 from langgraph.graph import StateGraph, END
 from .state import CodeWorkerState
 
@@ -26,7 +27,7 @@ def find_generated_script(project_dir: str) -> str | None:
     return max(py_files, key=os.path.getsize)
 
 
-def code_generate(state: CodeWorkerState) -> dict[str, any]:
+def code_generate(state: CodeWorkerState) -> dict[str, Any]:
     """Genera proyecto con OpenCode en modo agente (--auto)."""
     logger.info(f"[CODE] Generating: {state.query[:80]}...")
     
@@ -42,7 +43,7 @@ When done, the main script must print "OK" at the end."""
         
         result = subprocess.run(
             ["opencode", "run", "--model", "deepseek/deepseek-v4-flash",
-             "--dir", project_dir, full_prompt],
+             "--dir", project_dir, "--", full_prompt],
             capture_output=True, text=True, timeout=600,
             cwd=COWORK_DIR,
             env={**os.environ, "DEEPSEEK_API_KEY": os.getenv("DEEPSEEK_API_KEY", "")}
@@ -62,7 +63,7 @@ When done, the main script must print "OK" at the end."""
                 output = result.stderr.strip()
             return {
                 "project_dir": project_dir,
-                "tests_passed": 1,
+                "tests_passed": 0,
                 "tests_failed": 0,
                 "reply": output[:2000] if output else "OpenCode no generó archivos",
                 "complete": True
@@ -73,18 +74,20 @@ When done, the main script must print "OK" at the end."""
         # EJECUTAR el script generado
         logger.info(f"[CODE] Ejecutando script: {script_path}")
         exec_result = subprocess.run(
-            ["python", script_path],
+            [sys.executable, script_path],
             capture_output=True, text=True, timeout=120,
             cwd=project_dir
         )
         
         output = exec_result.stdout if exec_result.stdout else exec_result.stderr
         
+        # Verificar si el script crasheó
+        exec_failed = exec_result.returncode != 0 or ("Error" in output and "OK" not in output)
         return {
             "project_dir": project_dir,
-            "tests_passed": 1,
-            "tests_failed": 0,
-            "reply": f"✅ Código ejecutado correctamente:\n{output[:500]}",
+            "tests_passed": 0 if exec_failed else 1,
+            "tests_failed": 1 if exec_failed else 0,
+            "reply": f"{'❌ Error' if exec_failed else '✅'} Código ejecutado:\n{output[:500]}",
             "complete": True
         }
     except subprocess.TimeoutExpired:

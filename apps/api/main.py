@@ -100,15 +100,16 @@ async def run_task(request: RunRequest):
             max_iterations=request.max_iterations,
         )
         
-        steps_done = len([s for s in final_state.plan if s.status == "done"])
+        tests_passed = final_state.metadata.get("tests_passed", 0)
+        tests_failed = final_state.metadata.get("tests_failed", 0)
         return RunResponse(
             session_id=final_state.session_id,
-            status="completed" if final_state.is_complete() else "in_progress",
-            steps_completed=steps_done,
-            total_steps=len(final_state.plan),
+            status="completed" if final_state.metadata.get("complete") else "in_progress",
+            steps_completed=tests_passed,
+            total_steps=tests_passed + tests_failed,
             artifacts_count=len(final_state.artifacts),
             errors_count=len(final_state.errors),
-            message=f"Task completed: {steps_done}/{len(final_state.plan)} steps",
+            message=f"Task completed: {tests_passed}/{tests_passed + tests_failed} tests passed",
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

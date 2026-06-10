@@ -67,7 +67,7 @@ Output ONLY valid JSON:
   "project_name": "name",
   "project_description": "what to do",
   "project_type": "code_generation|tool_filesystem|tool_document|tool_web|tool_design|tool_edit|tool_shell|chat",
-  "steps": [{"id":1, "agent":"opencode", "task":"specific action"}]
+
 }
 CRITICAL: If project_type starts with "tool_" or is "chat", DO NOT create a Python project.
 If the user just says hello, asks a question, or chats without requesting an action, use project_type "chat" and respond helpfully.

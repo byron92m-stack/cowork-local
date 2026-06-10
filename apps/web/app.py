@@ -145,8 +145,9 @@ elif page == "💬 Chat Agentic":
                     )
                     
                     # Construir respuesta
-                    steps_done = len([s for s in final_state.plan if s.status == "done"])
-                    response = f"### ✅ Tarea completada: {steps_done}/{len(final_state.plan)} pasos\n\n"
+                    tests_passed = final_state.metadata.get("tests_passed", 0)
+                    tests_failed = final_state.metadata.get("tests_failed", 0)
+                    response = f"### ✅ Tarea completada: {tests_passed}/{tests_passed + tests_failed} tests\n\n"
                     
                     if final_state.artifacts:
                         for i, art in enumerate(final_state.artifacts[-3:]):  # Últimos 3

@@ -27,7 +27,7 @@ Adding an Email Server: Configure Mail.ru account with 2FA and app password. Set
 
 Adding an MCP Server: Create tools/mcp/name/server.py. Implement call_tool. Register in tools/mcp_client.py. Add security rules to config/settings.yaml.
 
-Adding a Tool to mcp_worker: Add elif block in execute_tool in graph/graph_mcp.py. Add classification example in PLANNER_SYSTEM. Add type to project_type list. Update OPENCODE.md.
+Adding a Tool to codewhale_worker: Add routing in graph/graph.py route_to_worker(). Add classification example in planner_system.txt. Add type to project_type list. Update COWORK.md.
 
 Fixing PDF Processing: Ensure tool_document uses state.project_path as priority. Remove limits on pages (reader.pages not reader.pages[:5]). Remove limits on text (remove [:1000]). For long content, save to file and reference path.
 

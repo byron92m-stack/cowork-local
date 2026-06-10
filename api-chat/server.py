@@ -2,9 +2,9 @@ import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from db import init_db
-from auth import router as auth_router
-from chat import router as chat_router
+from .db import init_db
+from .auth import router as auth_router
+from .chat import router as chat_router
 
 
 @asynccontextmanager

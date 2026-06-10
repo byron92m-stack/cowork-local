@@ -28,10 +28,11 @@ class MCPClient:
             from tools.mcp.docker_sandbox.server import call_tool
         elif server == "mail":
             from tools.mcp.mail.server import call_tool
-        elif server == "googledrive":
-            from tools.mcp.googledrive.server import call_tool
+
         elif server == "notion":
             from tools.mcp.notion.server import call_tool
+        elif server == "postgresql":
+            from tools.mcp.postgresql.server import call_tool
         elif server == "skills":
             from tools.mcp.skills.server import call_tool
         elif server == "telegram":
@@ -39,7 +40,7 @@ class MCPClient:
         elif server == "calendar":
             from tools.mcp.calendar.server import call_tool
         else:
-            return f"Error: Servidor no encontrado: {server}. Disponibles: filesystem, shell, git, docker, browser, websearch, code_sandbox, docker_sandbox, mail, googledrive, notion, skills"
+            return f"Error: Servidor no encontrado: {server}. Disponibles: filesystem, shell, git, docker_sandbox, filewatcher, browser, websearch, code_sandbox, mail, calendar, notion, postgresql, skills, telegram"
         
         try:
             result = await call_tool(tool, arguments)

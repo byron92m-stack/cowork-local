@@ -1,12 +1,12 @@
 # Cowork-Local v3.4.1
 
-Local multi-agent development assistant with 6 specialized workers running on LangGraph. Planner uses DeepSeek Reasoner (Pro). Workers use deepseek/deepseek-v4-flash (API direct), deepseek-v4-flash (CodeWhale), or deepseek-chat (Flash). Total cost approximately $0.50 per month. Booking adds ~$0.30/month per 1000 appointments. Accounting and Marketing workers add no extra cost.
+Local multi-agent development assistant with 5 specialized workers running on LangGraph. Planner uses DeepSeek Reasoner (Pro). Workers use deepseek/deepseek-v4-flash (API direct), deepseek-v4-flash (CodeWhale), or deepseek-chat (Flash). Total cost approximately $0.50 per month. Booking adds ~$0.30/month per 1000 appointments. Accounting and Marketing workers add no extra cost.
 
 ## Architecture
 
 The Planner (DeepSeek Pro) classifies user intent into 9 types and routes to the correct worker via conditional edges. Workers share COWORK_DIR as cwd for full project visibility and multi-worker collaboration. All Redis operations use _redis_safe() wrapper for resilience. Subprocess calls use sys.executable and -- flag protection.
 
-Workers: code_worker generates Python projects via OpenCode in agent mode with native tools (Read, Write, Glob, Shell). codewhale_worker provides 30+ tools via CodeWhale agent mode for filesystem, document, web, shell, and editing tasks. design_worker generates UI/UX and marketing art via OpenDesign API on port 34095. booking_worker handles medical appointments via Telegram with Redis sessions keyed by doc_id. accounting_worker extracts invoice data from SRI XML and PDF attachments via IMAP polling. marketing_worker creates weekly campaign art using OpenDesign with CLI approval workflow.
+Workers: code_worker generates Python projects via OpenCode in agent mode with native tools (Read, Write, Glob, Shell). codewhale_worker provides 30+ tools via CodeWhale agent mode for filesystem, document, web, shell, and editing tasks. design_worker generates UI/UX and marketing art via OpenDesign API on port 34095. booking_worker handles medical appointments via Telegram with Redis sessions keyed by doc_id. accounting_worker extracts invoice data from SRI XML and PDF attachments via IMAP polling. marketing campaigns are handled by design_worker via campaign_generate, campaign_view, campaign_approve, campaign_list nodes.
 
 All state definitions in state.py: CoworkState, CodeWorkerState, DesignWorkerState, BookingState, AccountingState. Step class, plan field, add_step, is_complete, get_pending_steps, get_current_step, and summary removed in Phase 35 cleanup.
 
@@ -27,8 +27,8 @@ Medical appointment booking agency with 8-node LangGraph state machine. Patient 
 ### accounting_worker
 Extracts invoice data from SRI electronic invoices (XML and PDF). Single-node LangGraph subgraph. XML extraction uses Clark notation with automatic namespace detection. PDF extraction uses regex patterns for RUC, invoice number, total, and date. Saves to invoices table in PostgreSQL with UNIQUE constraint on (numero_factura, ruc_emisor). Duplicate detection prevents re-processing. No LLM required — deterministic extraction. IMAP polling via accounting_poller.py processes UNSEEN emails with attachments matching invoice patterns. Table: invoices (id, numero_factura, ruc_emisor, razon_social, fecha_emision, subtotal, iva, total, source_email, attachment_path, raw_data JSONB, created_at).
 
-### marketing_worker
-Weekly campaign art generation using OpenDesign. CLI-based workflow: --generate creates campaign via OpenDesign poster skill, --view opens latest campaign in Firefox, --approve marks campaign approved and sends email notification, --list shows all campaigns with status. Campaign templates rotate by weekday: Lunes de Salud (blue/white medical), Miércoles de Bienestar (green wellness), Viernes de Oferta (red/gold promotion). Output saved to output/design/ and approved campaigns copied to output/marketing/approved/. Uses design_worker subgraph for OpenDesign integration.
+### marketing (design_worker sub-nodes)
+Weekly campaign art generation using design_worker sub-nodes (campaign_generate, campaign_view, campaign_approve, campaign_list). Invoked via python apps/cli/cowork_graph.py --design [generate|view|approve|list] or python tools/marketing_scheduler.py. Campaign templates rotate by weekday. Output saved to output/design/, approved to output/marketing/approved/.
 
 ## OpenCode Pro Assistant
 Independent collaborative coding assistant at ~/opencode-pro/. Uses deepseek/deepseek-v4-pro via OpenCode CLI. Read-only consultative mode — analyzes code, reads filesystem, recommends solutions but never executes commands or modifies files. Shows code snippets for manual implementation. Launch: cd ~/opencode-pro && opencode --model deepseek/deepseek-v4-pro. Config: AGENTS.md with rules, capabilities, and project context.
@@ -43,7 +43,7 @@ localhost:6379, no password. Shared connection pool via graph/redis_client.py si
 Mail.ru account: josue.martinez.593@mail.ru. SMTP: smtp.mail.ru:465 SSL. IMAP: imap.mail.ru:993 SSL. Auth via app password with 2FA. Rate limit: 1 email/minute enforced by email_sender.py queue and APScheduler 60s interval. Config in .env: MAIL_USER, MAIL_PASSWORD, MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_IMAP_HOST, MAIL_IMAP_PORT.
 
 ## Installation and Commands
-Activate environment: cd /media/SSD1T/cowork-local && source venv/bin/activate. Install: pip install -r requirements.txt. Start API: cd api-chat && python server.py &. Start Telegram bot: python api-chat/telegram_bot.py. Start OpenDesign daemon: cd workers/open-design && pnpm tools-dev run web --daemon-port 34095 --web-port 45125 &. Use Cowork: python apps/cli/cowork_graph.py "task". Marketing: python tools/marketing_scheduler.py --generate | --view | --approve | --list. Accounting poller: python tools/accounting_poller.py. OpenCode Pro: cd ~/opencode-pro && opencode --model deepseek/deepseek-v4-pro.
+Activate environment: cd /media/SSD1T/cowork-local && source venv/bin/activate. Install: pip install -r requirements.txt. Start API: cd api-chat && python server.py &. Start Telegram bot: python api-chat/telegram_bot.py. Start OpenDesign daemon: cd workers/open-design && pnpm tools-dev run web --daemon-port 34095 --web-port 45125 &. Use Cowork: python apps/cli/cowork_graph.py "task". Marketing: python apps/cli/cowork_graph.py --design [generate|view|approve|list]. Accounting poller: python tools/accounting_poller.py. OpenCode Pro: cd ~/opencode-pro && opencode --model deepseek/deepseek-v4-pro.
 
 ## Project Structure
 cowork-local/ with api-chat (FastAPI + Telegram bot), apps/cli (CLI tools), graph (LangGraph sub-graphs), workers (codewhale, opencode-pro, open-design binaries), tools (MCP servers, email tools, marketing/accounting schedulers), infra (Docker Compose, SQL schemas), output (projects, design, marketing/approved), venv (Python 3.13).

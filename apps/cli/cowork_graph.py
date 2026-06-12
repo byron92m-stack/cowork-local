@@ -9,6 +9,22 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 from graph.graph import run_graph
 
 if __name__ == "__main__":
+    # Modo diseño directo (sin planner)
+    if "--design" in sys.argv:
+        from graph.graph_design import build_design_graph
+        from graph.state import DesignWorkerState
+        
+        action = sys.argv[-1] if len(sys.argv) > 2 else "generate"
+        skill_map = {"generate": "campaign_generate", "view": "campaign_view", 
+                     "approve": "campaign_approve", "list": "campaign_list"}
+        skill = skill_map.get(action, action)
+        
+        state = DesignWorkerState(query="", skill=skill)
+        graph = build_design_graph()
+        result = graph.invoke(state)
+        print(result.get("reply", "Sin respuesta"))
+        sys.exit(0)
+    
     args = sys.argv[1:]
     
     # Detectar --session

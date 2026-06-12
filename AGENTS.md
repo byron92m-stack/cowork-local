@@ -38,4 +38,4 @@ You are the code_worker in a LangGraph multi-agent system.
 ## Related Workers
 - codewhale_worker: Filesystem search, document analysis, web, shell, editing
 - design_worker: UI/UX via OpenDesign API (port 34095)
-- booking_worker: Medical appointments (Telegram + Email)
+- booking_worker: Medical appointments (Telegram only)

@@ -74,3 +74,26 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     print("📧 Email Sender iniciado (1/min)")
     asyncio.run(process_email_queue())
+
+
+def send_email_simple(to, subject, body, attachments=None):
+    """Envía un email directamente (sin cola). Para uso puntual (marketing, alertas)."""
+    try:
+        import yagmail
+        yag = yagmail.SMTP(
+            user=MAIL_USER,
+            password=MAIL_PASSWORD,
+            host=MAIL_SMTP_HOST,
+            port=MAIL_SMTP_PORT
+        )
+        yag.send(
+            to=to,
+            subject=subject,
+            contents=body,
+            attachments=attachments or []
+        )
+        logger.info(f"Email enviado a {to}: {subject}")
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando email: {e}")
+        return False

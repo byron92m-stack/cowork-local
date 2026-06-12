@@ -7,6 +7,13 @@ load_dotenv()
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Event loop persistente para llamadas async desde código sync
+_async_loop = asyncio.new_event_loop()
+
+def _run_async(coro):
+    """Ejecuta una coroutine en el loop persistente sin cerrarlo."""
+    return _async_loop.run_until_complete(coro)
+
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 STATE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "telegram_state.txt")
 AUTHORIZED_CHAT_ID = "8047752200"
@@ -85,7 +92,7 @@ def handle_citas(chat_id):
             await pool.close()
             return appts
         
-        appts = asyncio.run(_get())
+        appts = _run_async(_get())
         
         if not appts:
             return "No tenés citas agendadas. ¿Querés agendar una? Escribime."
@@ -130,7 +137,7 @@ def handle_cancel(chat_id):
             await pool.close()
             return a, start
         
-        appt, msg_or_start = asyncio.run(_cancel())
+        appt, msg_or_start = _run_async(_cancel())
         
         if appt is None:
             return msg_or_start
@@ -227,7 +234,7 @@ while True:
             # Vendedor IA
             try:
                 from graph.graph_booking import run_booking
-                result = asyncio.run(run_booking(
+                result = _run_async(run_booking(
                     channel="telegram",
                     user_id=chat_id_str,
                     message=text

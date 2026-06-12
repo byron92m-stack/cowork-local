@@ -1,14 +1,16 @@
 -- ============================================
--- Cowork-Local v3.3: Booking Agency Tables
+-- Cowork-Local v3.4.1: Booking Agency Tables
 -- ============================================
 
 -- Pacientes
 CREATE TABLE IF NOT EXISTS patients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    full_name TEXT,
-    email TEXT UNIQUE,
+    full_name TEXT DEFAULT '',
+    email TEXT,
     phone TEXT,
     telegram_chat_id TEXT UNIQUE,
+    id_type TEXT,  -- 'cedula', 'ruc', 'pasaporte'
+    doc_id TEXT UNIQUE,  -- numero de documento (llave universal)
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -95,3 +97,22 @@ INSERT INTO faqs (question, answer, category) VALUES
 ('¿Atienden fines de semana?', 'Lunes a viernes de 8:00 a 17:00.', 'horarios'),
 ('¿Puedo cancelar mi cita?', '¡Claro! Solo avísame con tiempo.', 'cancelaciones')
 ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- Accounting: Facturas electrónicas (SRI)
+-- ============================================
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    numero_factura TEXT NOT NULL,
+    ruc_emisor TEXT NOT NULL,
+    razon_social TEXT,
+    fecha_emision DATE,
+    subtotal DECIMAL(12,2),
+    iva DECIMAL(12,2),
+    total DECIMAL(12,2),
+    source_email TEXT,
+    attachment_path TEXT,
+    raw_data JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(numero_factura, ruc_emisor)
+);

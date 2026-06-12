@@ -18,24 +18,69 @@ async def get_pool():
     )
 
 # ─── Pacientes ──────────────────────────────────────────────
-async def get_or_create_patient(pool, channel: str, user_id: str, full_name: str = None, email: str = None) -> dict:
+async def get_or_create_patient(pool, channel: str, user_id: str, full_name: str = None, email: str = None, patient_id: str = None, doc_id: str = None) -> dict:
+    """Busca paciente por doc_id (cedula) > patient_id (UUID) > telegram_chat_id > email+channel.
+    Crea uno nuevo solo si no existe ninguna coincidencia."""
     async with pool.acquire() as conn:
+        row = None
+        
+        # 1. Buscar por doc_id (cedula/ruc/pasaporte) - llave universal
+        if doc_id:
+            row = await conn.fetchrow("SELECT * FROM patients WHERE doc_id = $1", doc_id)
+            if row:
+                # Actualizar canal si es necesario
+                if channel == "telegram" and not row['telegram_chat_id']:
+                    try:
+                        row = await conn.fetchrow(
+                            "UPDATE patients SET telegram_chat_id=$1 WHERE id=$2 RETURNING *",
+                            user_id, row['id']
+                        )
+                    except UniqueViolationError:
+                        # Otro paciente ya tiene ese chat_id, liberarlo primero
+                        await conn.execute(
+                            "UPDATE patients SET telegram_chat_id=NULL WHERE telegram_chat_id=$1 AND id != $2",
+                            user_id, row['id']
+                        )
+                        row = await conn.fetchrow(
+                            "UPDATE patients SET telegram_chat_id=$1 WHERE id=$2 RETURNING *",
+                            user_id, row['id']
+                        )
+                return dict(row)
+        
+        # 2. Buscar por UUID
+        if patient_id:
+            try:
+                from uuid import UUID
+                uuid_obj = UUID(patient_id)
+                row = await conn.fetchrow("SELECT * FROM patients WHERE id = $1", uuid_obj)
+                if row:
+                    return dict(row)
+            except (ValueError, TypeError):
+                pass
+        
+        # 3. Buscar por telegram_chat_id
         if channel == "telegram":
             row = await conn.fetchrow("SELECT * FROM patients WHERE telegram_chat_id = $1", user_id)
-            if not row:
-                row = await conn.fetchrow(
-                    "INSERT INTO patients (telegram_chat_id, full_name, email) VALUES ($1, $2, $3) RETURNING *",
-                    user_id, full_name, email
-                )
+            if row:
+                return dict(row)
+        
+        # 4. Buscar por email
+        if email:
+            row = await conn.fetchrow("SELECT * FROM patients WHERE email = $1", email)
+            if row:
+                return dict(row)
+        
+        # 5. Crear nuevo paciente
+        if channel == "telegram":
+            row = await conn.fetchrow(
+                "INSERT INTO patients (telegram_chat_id, full_name, email) VALUES ($1, $2, $3) RETURNING *",
+                user_id, full_name, email
+            )
         else:
-            # Email: buscar por email
-            row = await conn.fetchrow("SELECT * FROM patients WHERE email = $1", user_id)
-            if not row:
-                # Si no encuentra, crear con email y nombre vacio
-                row = await conn.fetchrow(
-                    "INSERT INTO patients (email, full_name) VALUES ($1, $2) RETURNING *",
-                    user_id, full_name or ''
-                )
+            row = await conn.fetchrow(
+                "INSERT INTO patients (full_name, email) VALUES ($1, $2) RETURNING *",
+                full_name or '', email or user_id
+            )
         return dict(row)
 
 # ─── Disponibilidad ─────────────────────────────────────────
@@ -214,19 +259,27 @@ async def get_patient_by_doc(pool, doc_id: str) -> dict:
         return dict(row) if row else None
 
 async def link_doc_to_patient(pool, patient_id: str, id_type: str, doc_id: str) -> dict:
-    """Vincula documento a paciente. Si ya existe en otro, lo mueve a este."""
+    """Vincula documento a paciente. Si ya existe en otro, lo mueve a este.
+    Usa transacción para atomicidad."""
     async with pool.acquire() as conn:
-        # Verificar si el doc_id ya pertenece a otro paciente
-        existing = await conn.fetchrow("SELECT id FROM patients WHERE doc_id = $1 AND id != $2", doc_id, patient_id)
-        if existing:
-            # Quitar doc_id del paciente anterior
-            await conn.execute("UPDATE patients SET doc_id = NULL, id_type = 'cedula' WHERE id = $1", existing['id'])
-        
-        row = await conn.fetchrow(
-            "UPDATE patients SET id_type = $1, doc_id = $2, updated_at = NOW() WHERE id = $3 RETURNING *",
-            id_type, doc_id, patient_id
-        )
-        return dict(row) if row else None
+        async with conn.transaction():
+            # Verificar si el doc_id ya pertenece a otro paciente
+            existing = await conn.fetchrow(
+                "SELECT id FROM patients WHERE doc_id = $1 AND id != $2 FOR UPDATE",
+                doc_id, patient_id
+            )
+            if existing:
+                # Quitar doc_id del paciente anterior
+                await conn.execute(
+                    "UPDATE patients SET doc_id = NULL, id_type = NULL WHERE id = $1",
+                    existing['id']
+                )
+            
+            row = await conn.fetchrow(
+                "UPDATE patients SET id_type = $1, doc_id = $2, updated_at = NOW() WHERE id = $3 RETURNING *",
+                id_type, doc_id, patient_id
+            )
+            return dict(row) if row else None
 
 async def create_patient_with_doc(pool, id_type: str, doc_id: str, full_name: str = None,
                                    email: str = None, telegram_chat_id: str = None) -> dict:

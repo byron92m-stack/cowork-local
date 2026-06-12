@@ -32,4 +32,4 @@ You are the codewhale_worker in a LangGraph multi-agent system.
 ## Related Workers
 - code_worker: OpenCode agent mode (deepseek/deepseek-v4-flash) — Python projects, scripts, dashboards
 - design_worker: OpenDesign API (port 34095) — UI/UX, landing pages
-- booking_worker: Medical appointments (Telegram + Email)
+- booking_worker: Medical appointments (Telegram only)

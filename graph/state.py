@@ -171,3 +171,26 @@ class BookingState(BaseModel):
     
     class Config:
         arbitrary_types_allowed = True
+
+
+# ─── Estado del Worker de Accounting (Facturación) ──────────────────
+class AccountingState(BaseModel):
+    """Estado aislado para el worker de contabilidad (facturas electrónicas)."""
+    # Canal y usuario
+    channel: str = "email"
+    user_id: str = ""  # email del remitente
+    
+    # Archivo adjunto
+    attachment_path: str = ""  # ruta al archivo descargado (PDF/XML)
+    attachment_type: str = ""  # "xml" | "pdf" | None
+    
+    # Datos extraídos de la factura
+    invoice_data: dict = {}  # {ruc, razon_social, numero, fecha, subtotal, iva, total}
+    
+    # Metadata
+    reply: str = ""
+    complete: bool = False
+    error: str = ""
+    
+    class Config:
+        arbitrary_types_allowed = True

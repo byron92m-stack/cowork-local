@@ -140,7 +140,11 @@ def fecha_legible(date_str):
 # ═══════════════ ROUTER ═══════════════
 async def booking_router(state: BookingState) -> dict:
     pool = await get_db_pool()
-    patient = await get_or_create_patient(pool, state.channel, state.user_id)
+    patient = await get_or_create_patient(pool, state.channel, state.user_id, patient_id=state.patient_id, doc_id=state.doc_id)
+    # Actualizar state con datos reales del paciente
+    state.patient_id = str(patient['id'])
+    if patient.get('doc_id'):
+        state.doc_id = patient['doc_id']
     msg = state.user_message.strip()
     hist_add = [{"role": "user", "content": state.user_message}]
 
@@ -152,9 +156,18 @@ async def booking_router(state: BookingState) -> dict:
         if old_doc:
             await delete_booking_state_async(f"booking:doc:{old_doc}")
         await delete_booking_state_async(f"booking:tmp:{state.channel}:{state.user_id}")
-        new_patient = await get_or_create_patient(pool, state.channel, state.user_id)
+        new_patient = await get_or_create_patient(pool, state.channel, state.user_id)  # sin IDs viejos, /reset crea nuevo
         return {"patient_id": str(new_patient['id']), "step": "ask_doc", "intent": "chat",
                 "reply": "Identidad cambiada. " + WELCOME_TEXT, "history": []}
+
+    # Paciente con doc_id pero sin datos completos → pedir lo que falta
+    if patient.get('doc_id') and (not patient.get('full_name') or not patient.get('email')):
+        faltante = []
+        if not patient.get('full_name'): faltante.append("nombre completo")
+        if not patient.get('email'): faltante.append("email")
+        return {"patient_id": str(patient['id']), "step": "ask_data", "intent": "chat",
+                "reply": f"Ya tengo tu cédula. Ahora necesito tu {', '.join(faltante)}. Ej: Juan Perez, juan@gmail.com",
+                "history": state.history + hist_add}
 
     # Paciente completo + sin flujo activo → Flash clasifica
     if patient.get('doc_id') and patient.get('full_name') and patient.get('email'):
@@ -205,29 +218,50 @@ async def booking_router(state: BookingState) -> dict:
             if name_raw:
                 await conn.execute("UPDATE patients SET full_name=$1 WHERE id=$2", name_raw[:100], str(patient['id']))
             if email_raw:
-                await conn.execute("UPDATE patients SET email=$1 WHERE id=$2", email_raw[:100], str(patient['id']))
-        patient = await get_or_create_patient(pool, state.channel, state.user_id)
+                try:
+                    await conn.execute("UPDATE patients SET email=$1 WHERE id=$2", email_raw[:100], str(patient['id']))
+                except UniqueViolationError:
+                    logger.warning(f"Email {email_raw} ya existe en otro paciente")
+        patient = await get_or_create_patient(pool, state.channel, state.user_id, patient_id=state.patient_id, doc_id=state.doc_id)
 
         if patient.get('full_name') and patient.get('email'):
             return {"patient_id": str(patient['id']), "step": "show_help", "intent": "chat",
                     "reply": "Gracias! Ya tenes todos tus datos. " + HELP_TEXT,
                     "history": state.history + hist_add}
 
-    # Faltan nombre/email
+    # Faltan nombre/email y posiblemente cedula
     if state.step == "ask_data":
-        info = await call_llm(EXTRACT_PROMPT, msg, json_mode=True)
-        try:
-            data = json.loads(info)
-            name = data.get('name', '').strip()
-            email_addr = data.get('email', '').strip()
-        except Exception:
-            name = email_addr = ''
+        # Si no tiene doc_id, intentar extraer todo junto (cedula + nombre + email)
+        if not patient.get('doc_id'):
+            info = await call_llm(EXTRACT_ALL_PROMPT, msg, json_mode=True)
+            try:
+                data = json.loads(info)
+                cedula_raw = data.get('cedula', '').strip()
+                name = data.get('name', '').strip()
+                email_addr = data.get('email', '').strip()
+            except Exception:
+                cedula_raw = name = email_addr = ''
+            if cedula_raw:
+                tipo, val = detectar_y_validar_id(cedula_raw)
+                if tipo:
+                    await link_doc_to_patient(pool, str(patient['id']), tipo, val)
+        else:
+            info = await call_llm(EXTRACT_PROMPT, msg, json_mode=True)
+            try:
+                data = json.loads(info)
+                name = data.get('name', '').strip()
+                email_addr = data.get('email', '').strip()
+            except Exception:
+                name = email_addr = ''
         async with pool.acquire() as conn:
             if name:
                 await conn.execute("UPDATE patients SET full_name=$1 WHERE id=$2", name[:100], str(patient['id']))
             if email_addr:
-                await conn.execute("UPDATE patients SET email=$1 WHERE id=$2", email_addr[:100], str(patient['id']))
-        patient = await get_or_create_patient(pool, state.channel, state.user_id)
+                try:
+                    await conn.execute("UPDATE patients SET email=$1 WHERE id=$2", email_addr[:100], str(patient['id']))
+                except UniqueViolationError:
+                    logger.warning(f"Email {email_addr} ya existe en otro paciente")
+        patient = await get_or_create_patient(pool, state.channel, state.user_id, patient_id=state.patient_id, doc_id=state.doc_id)
         if not patient.get('full_name') or not patient.get('email'):
             faltante = []
             if not patient.get('full_name'): faltante.append("nombre completo")
@@ -315,7 +349,7 @@ async def booking_flow(state: BookingState) -> dict:
         if affirmative:
             start_time = datetime.fromisoformat(f"{state.selected_date}T{state.selected_slot}:00-05:00")
             appt = await create_appointment(pool, state.patient_id, start_time, source_channel=state.channel)
-            patient = await get_or_create_patient(pool, state.channel, state.user_id)
+            patient = await get_or_create_patient(pool, state.channel, state.user_id, patient_id=state.patient_id, doc_id=state.doc_id)
             if patient.get('email'):
                 from tools.mcp.calendar.server import _create_ics
                 ics_content = _create_ics(
@@ -405,6 +439,7 @@ async def run_booking(channel, user_id, message, history=None):
         patient = await get_or_create_patient(pool, channel, user_id)
         if patient and patient.get('doc_id'):
             saved = load_booking_state(doc_id=patient['doc_id'])
+    saved = saved or {}  # Garantizar que nunca sea None
     state = BookingState(
         channel=channel, user_id=user_id, user_message=message,
         patient_id=saved.get('patient_id', ''),
@@ -423,7 +458,7 @@ async def run_booking(channel, user_id, message, history=None):
     # Inyectar doc_id del paciente si no esta en el result
     if not result.get('doc_id'):
         pool = await get_db_pool()
-        patient = await get_or_create_patient(pool, channel, user_id)
+        patient = await get_or_create_patient(pool, channel, user_id, patient_id=saved.get("patient_id", ""), doc_id=saved.get("doc_id", ""))
         if patient.get('doc_id'):
             result['doc_id'] = patient['doc_id']
     result['channel'] = channel

@@ -41,7 +41,8 @@ def _call_opendesign(query: str, skill: str) -> tuple[str | None, str | None]:
     
     resp = requests.post(
         "http://127.0.0.1:34095/api/chat",
-        json={"message": query, "agentId": "opencode", "skillId": skill or "frontend"},
+        json={"message": query, "agentId": "opencode", "skillId": skill or "frontend",
+             "model": "deepseek/deepseek-v4-flash"},
         timeout=600, stream=True
     )
     if not resp.ok:

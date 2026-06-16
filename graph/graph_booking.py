@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from datetime import datetime, date
 from .state import BookingState
-from .booking_prompts import VENDEDOR_SYSTEM, BOOKING_ROUTER_PROMPT
+from .prompts.booking_prompts import VENDEDOR_SYSTEM, BOOKING_ROUTER_PROMPT
 from .booking_db import (
     get_pool, get_or_create_patient, get_available_slots,
     create_appointment, update_appointment_status,

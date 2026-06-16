@@ -16,7 +16,7 @@ Worker Security: OpenCode CLI runs as subprocess with 600s timeout, uses deepsee
 
 ## Audit Results June 2026
 
-Zero API keys committed. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in dotenv excluded from Git. Project unified into single folder. Anthropic proxy removed. OpenCode CLI direct integration eliminates proxy translation layer. Workers consolidated in workers/ directory. 26+ bugs fixed across 5 audit rounds. 88 Python files syntax-verified. Dead code removed: graph/nodes/, graph_mcp.py, Step class, plan steps system, deepseek_client plan()/review().
+Zero API keys committed. Zero personal emails exposed. Zero local IPs exposed. All sensitive data in dotenv excluded from Git. Project unified into single folder. Anthropic proxy removed. OpenCode CLI direct integration eliminates proxy translation layer. Workers consolidated in workers/ directory. 26+ bugs fixed across 5 audit rounds. 84 Python files syntax-verified. Dead code removed: graph/nodes/, graph_mcp.py, Step class, plan steps system, deepseek_client plan()/review().
 
 ## PDF Processing Security
 PDF files read via pypdf with no shell execution. Extracted text sanitized. No PDF rendering or JavaScript execution. Path validated before access. Extracts all pages and all text with no arbitrary limits.
@@ -49,7 +49,7 @@ OpenDesign API on localhost:34095 only. Output saved to output/design/ and outpu
 Each worker runs in isolated sub-graph with independent state: code_worker (CodeWorkerState), design_worker (DesignWorkerState), codewhale_worker (CoworkState), booking_worker (BookingState), accounting_worker (AccountingState). Sub-graphs cannot access each other's state. All wrappers propagate errors to state.errors for proper diagnosis. OpenDesign daemon on port 34095 bound to localhost only. OpenDesign artifacts in .od/projects/ directory, gitignored.
 
 ## Workers Directory Security
-All worker binaries and services consolidated in workers/: codewhale (CodeWhale TUI with dynamic path detection), opencode-pro (reserved for future assistant), open-design (OpenDesign daemon, gitignored artifacts). OpenCode Pro assistant at ~/opencode-pro/ runs in read-only consultative mode.
+All worker binaries and services consolidated in workers/: codewhale (CodeWhale TUI with dynamic path detection), opencode-pro (reserved for future assistant), open-design (OpenDesign daemon, gitignored artifacts). Langcli Pro assistant at ~/chat-colaborativo/ runs in read-only consultative mode.
 
 ## Security Improvements Summary (v3.4.1 + Phase 35-36)
 

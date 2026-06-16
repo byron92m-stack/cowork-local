@@ -2,7 +2,7 @@
 
 ## Overview
 
-Multi-agent system with DeepSeek V4 Pro planner and 5 specialized workers via LangGraph sub-graph architecture. 30+ tools via CodeWhale + OpenCode agent mode. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence (34,332 nodes). All 88 Python files syntax-verified. 26+ bugs fixed across 5 audit rounds. Production ready. Cost approximately $0.50 per month. Booking adds ~$0.30/month per 1000 appointments. Accounting and Marketing workers add no extra cost.
+Multi-agent system with DeepSeek V4 Pro planner and 5 specialized workers via LangGraph sub-graph architecture. 30+ tools via CodeWhale + OpenCode agent mode. PostgreSQL plus Redis. Telegram assistant 24/7. Playwright for web automation. Graphify for code intelligence (34,332 nodes). All 84 Python files syntax-verified. 26+ bugs fixed across 5 audit rounds. Production ready. Cost approximately $0.50 per month. Booking adds ~$0.30/month per 1000 appointments. Accounting and Marketing workers add no extra cost.
 
 ## Multi-Agent Pipeline
 
@@ -30,7 +30,7 @@ Main graph in graph.py contains planner, review, and decision nodes. Sub-graphs:
 
 ## Workers Directory
 
-All worker binaries and services consolidated in workers/: codewhale (CodeWhale TUI + .codewhale config, 30+ tools), opencode-pro (reserved for OpenCode Pro assistant), open-design (OpenDesign daemon, UI/UX generation, port 34095). OpenCode Pro assistant at ~/opencode-pro/ uses deepseek-v4-pro in read-only consultative mode.
+All worker binaries and services consolidated in workers/: codewhale (CodeWhale TUI + .codewhale config, 30+ tools), opencode-pro (reserved for OpenCode Pro assistant), open-design (OpenDesign daemon, UI/UX generation, port 34095). OpenCode Pro assistant at ~/chat-colaborativo/ uses deepseek-v4-pro in read-only consultative mode.
 
 ## Infrastructure
 

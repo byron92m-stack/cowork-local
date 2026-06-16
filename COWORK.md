@@ -4,7 +4,7 @@
 - **Cowork**: `python apps/cli/cowork_graph.py "task"` — multi-agent, Planner(Pro) + 5 workers, 5 iterations, timeout 600s
 - **Code**: `opencode run "prompt"` — OpenCode CLI direct with Flash
 - **Assistant**: Telegram bot (@byron92m_bot)
-- **OpenCode Pro**: `cd ~/opencode-pro && opencode --model deepseek/deepseek-v4-pro` — independent collaborative assistant (read-only)
+- **Langcli Pro**: `cd ~/chat-colaborativo && ./start.sh` — independent collaborative assistant (read-only, DeepSeek V4 Pro)
 
 ## Architecture
 LangGraph with independent sub-graphs. All Redis operations wrapped in _redis_safe(). All subprocess calls use sys.executable and -- flag protection. Workers share COWORK_DIR as cwd for full project visibility and multi-worker collaboration.
@@ -54,4 +54,4 @@ Generate code, don't explain. Use absolute paths. For long content: save to file
 Booking bot @byron92m_bot with commands: /start, /citas, /cancelar, /ayuda, /reset. Legacy: /list, /switch, /nueva, /cerrar, /estado, /pc. Multi-session by doc_id, 24h APScheduler reminders, rate limiting.
 
 ## Infrastructure
-PostgreSQL with 14 tables (8 Cowork + 6 booking + 1 accounting). Redis with _redis_safe wrapper. Graphify: 34,332 nodes, 50,990 edges. 16 MCP servers. Playwright in /browsers/. APScheduler for reminders and email queue. 88 Python files syntax-verified, 26+ bugs fixed, production ready.
+PostgreSQL with 14 tables (8 Cowork + 6 booking + 1 accounting). Redis with _redis_safe wrapper. Graphify: 34,332 nodes, 50,990 edges. 16 MCP servers. Playwright in /browsers/. APScheduler for reminders and email queue. 84 Python files syntax-verified, 26+ bugs fixed, production ready.

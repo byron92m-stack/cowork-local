@@ -194,3 +194,4 @@ class AccountingState(BaseModel):
     
     class Config:
         arbitrary_types_allowed = True
+
